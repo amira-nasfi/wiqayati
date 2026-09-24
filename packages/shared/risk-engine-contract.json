@@ -1,0 +1,271 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://wiqayati.sante.tn/schemas/risk-engine-contract-v1.json",
+  "title": "Contrat d'interface du moteur de risque Wiqayati — VERSION FIGÉE v1.0",
+  "description": "Ce contrat est figé. Tout module IA implémentant ce service doit respecter exactement ce schéma sans modification.",
+  "version": "1.0",
+  "frozen": true,
+  "frozenAt": "2026-09-24",
+
+  "endpoint": {
+    "method": "POST",
+    "path": "/risk-engine/evaluer",
+    "contentType": "application/json",
+    "auth": "Bearer JWT (audience: risk-engine, service-to-service)"
+  },
+
+  "request": {
+    "type": "object",
+    "required": ["request_id", "ins_patient", "version_questionnaire", "donnees_questionnaire", "contexte"],
+    "properties": {
+      "request_id": {
+        "type": "string",
+        "format": "uuid",
+        "description": "Clé d'idempotence générée par le backend Django (UUID v4)"
+      },
+      "ins_patient": {
+        "type": "string",
+        "pattern": "^[A-Z0-9\\-]{10,20}$",
+        "description": "Identifiant National de Santé du patient"
+      },
+      "version_questionnaire": {
+        "type": "string",
+        "enum": ["1.0"],
+        "description": "Version du formulaire de screening utilisé"
+      },
+      "donnees_questionnaire": {
+        "type": "object",
+        "required": [
+          "age", "genre", "imc", "tour_taille_cm",
+          "antecedents_familiaux_diabete", "hypertension_diagnostiquee",
+          "niveau_activite_physique", "qualite_alimentation",
+          "statut_tabagisme", "glycemie_jeun_connue",
+          "glycemie_jeun_mmol", "diabete_gestationnel_antecedent",
+          "medicaments_corticoides", "acanthosis_nigricans"
+        ],
+        "properties": {
+          "age": {
+            "type": "integer",
+            "minimum": 18,
+            "maximum": 120,
+            "description": "Âge du patient en années"
+          },
+          "genre": {
+            "type": "string",
+            "enum": ["M", "F", "AUTRE"],
+            "description": "Genre du patient"
+          },
+          "imc": {
+            "type": "number",
+            "minimum": 10.0,
+            "maximum": 80.0,
+            "description": "Indice de masse corporelle (kg/m²)"
+          },
+          "tour_taille_cm": {
+            "type": "number",
+            "minimum": 40.0,
+            "maximum": 200.0,
+            "description": "Tour de taille en centimètres"
+          },
+          "antecedents_familiaux_diabete": {
+            "type": "boolean",
+            "description": "Antécédents familiaux de diabète de type 2 au premier degré"
+          },
+          "hypertension_diagnostiquee": {
+            "type": "boolean",
+            "description": "Hypertension artérielle diagnostiquée"
+          },
+          "niveau_activite_physique": {
+            "type": "string",
+            "enum": ["FAIBLE", "MODERE", "ELEVE"],
+            "description": "Niveau d'activité physique habituel"
+          },
+          "qualite_alimentation": {
+            "type": "string",
+            "enum": ["MAUVAISE", "MOYENNE", "BONNE"],
+            "description": "Qualité de l'alimentation (auto-évaluation)"
+          },
+          "statut_tabagisme": {
+            "type": "string",
+            "enum": ["JAMAIS", "EX_FUMEUR", "FUMEUR_ACTUEL"],
+            "description": "Statut tabagique du patient"
+          },
+          "glycemie_jeun_connue": {
+            "type": "boolean",
+            "description": "Le patient connaît-il sa glycémie à jeun ?"
+          },
+          "glycemie_jeun_mmol": {
+            "type": ["number", "null"],
+            "minimum": 0.0,
+            "maximum": 40.0,
+            "description": "Glycémie à jeun en mmol/L (null si non connue)"
+          },
+          "diabete_gestationnel_antecedent": {
+            "type": "boolean",
+            "description": "Antécédent de diabète gestationnel (femmes uniquement)"
+          },
+          "medicaments_corticoides": {
+            "type": "boolean",
+            "description": "Prise de corticoïdes au long cours"
+          },
+          "acanthosis_nigricans": {
+            "type": "boolean",
+            "description": "Présence d'un acanthosis nigricans (signe clinique)"
+          }
+        },
+        "additionalProperties": false
+      },
+      "contexte": {
+        "type": "object",
+        "required": ["type_soumission", "role_soumetteur", "horodatage_soumission"],
+        "properties": {
+          "type_soumission": {
+            "type": "string",
+            "enum": ["AGENT", "AUTO_EVALUATION"],
+            "description": "Origine de la soumission"
+          },
+          "role_soumetteur": {
+            "type": "string",
+            "enum": ["AGENT_CAMPAGNE", "AGENT_SOINS_PRIMAIRES", "CITOYEN"],
+            "description": "Rôle de l'utilisateur ayant soumis le formulaire"
+          },
+          "horodatage_soumission": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Horodatage ISO 8601 de la soumission"
+          }
+        }
+      }
+    }
+  },
+
+  "response_success": {
+    "httpStatus": 200,
+    "type": "object",
+    "required": ["request_id", "niveau_risque", "score", "facteurs", "version_moteur", "evalue_le"],
+    "properties": {
+      "request_id": {
+        "type": "string",
+        "format": "uuid",
+        "description": "Echo du request_id de la requête (idempotence)"
+      },
+      "niveau_risque": {
+        "type": "string",
+        "enum": ["FAIBLE", "INTERMEDIAIRE", "ELEVE"],
+        "description": "Niveau de risque calculé — exactement l'une de ces trois valeurs"
+      },
+      "score": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 100.0,
+        "description": "Score numérique de risque — jamais null, jamais hors [0, 100]"
+      },
+      "facteurs": {
+        "type": "array",
+        "description": "Facteurs contributifs — peut être [] pour le stub, jamais absent",
+        "items": {
+          "type": "object",
+          "required": ["cle", "libelle", "poids", "valeur", "seuil", "direction"],
+          "properties": {
+            "cle": {
+              "type": "string",
+              "description": "Identifiant machine du facteur (ex: 'imc', 'age')"
+            },
+            "libelle": {
+              "type": "string",
+              "description": "Libellé lisible en français (ex: 'Indice de masse corporelle élevé')"
+            },
+            "poids": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Contribution relative du facteur"
+            },
+            "valeur": {},
+            "seuil": {},
+            "direction": {
+              "type": "string",
+              "enum": ["AU_DESSUS", "EN_DESSOUS", "PRESENT", "ABSENT"]
+            }
+          }
+        }
+      },
+      "version_moteur": {
+        "type": "string",
+        "description": "'stub-1.0' pour le stub, 'ia-x.y' pour le module IA — obligatoire pour la traçabilité"
+      },
+      "evalue_le": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Horodatage ISO 8601 de l'évaluation"
+      }
+    }
+  },
+
+  "response_error_422": {
+    "httpStatus": 422,
+    "type": "object",
+    "required": ["request_id", "code_erreur", "message_erreur", "details"],
+    "properties": {
+      "request_id": { "type": "string" },
+      "code_erreur": { "type": "string", "enum": ["PAYLOAD_INVALIDE"] },
+      "message_erreur": { "type": "string" },
+      "details": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "champ": { "type": "string" },
+            "probleme": { "type": "string" },
+            "recu": {}
+          }
+        }
+      }
+    }
+  },
+
+  "response_error_503": {
+    "httpStatus": 503,
+    "type": "object",
+    "required": ["request_id", "code_erreur", "message_erreur", "reessayer_dans_secondes"],
+    "properties": {
+      "request_id": { "type": "string" },
+      "code_erreur": { "type": "string", "enum": ["MOTEUR_INDISPONIBLE"] },
+      "message_erreur": { "type": "string" },
+      "reessayer_dans_secondes": { "type": "integer" }
+    }
+  },
+
+  "stub_logic": {
+    "description": "Logique déterministe du stub — scores en points",
+    "scoring_rules": [
+      { "condition": "age >= 45", "points": 15 },
+      { "condition": "imc >= 30", "points": 20 },
+      { "condition": "imc >= 25 AND imc < 30", "points": 10 },
+      { "condition": "antecedents_familiaux_diabete == true", "points": 20 },
+      { "condition": "hypertension_diagnostiquee == true", "points": 15 },
+      { "condition": "niveau_activite_physique == 'FAIBLE'", "points": 10 },
+      { "condition": "qualite_alimentation == 'MAUVAISE'", "points": 5 },
+      { "condition": "statut_tabagisme == 'FUMEUR_ACTUEL'", "points": 5 },
+      { "condition": "acanthosis_nigricans == true", "points": 10 },
+      { "condition": "diabete_gestationnel_antecedent == true", "points": 15 }
+    ],
+    "risk_thresholds": {
+      "FAIBLE": "score < 30",
+      "INTERMEDIAIRE": "30 <= score < 60",
+      "ELEVE": "score >= 60"
+    },
+    "sla_ms": 200
+  },
+
+  "contract_rules": {
+    "idempotency": "Un request_id déjà traité retourne le même résultat sans recalcul",
+    "atomicity": "Les champs niveau_risque, score et facteurs sont toujours présents ensemble",
+    "score_range": "score est toujours dans [0.0, 100.0], jamais null",
+    "factors_field": "facteurs peut être [] mais ne peut pas être absent de la réponse",
+    "engine_version": "version_moteur est obligatoire dans toute réponse réussie",
+    "sla_stub_ms": 200,
+    "sla_ia_ms": 3000,
+    "switch_mechanism": "Variable d'environnement RISK_ENGINE_URL — permet de basculer stub → IA sans toucher au code"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "wiqayati",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Plateforme tunisienne de dépistage précoce du diabète de type 2",
+  "workspaces": [
+    "frontend",
+    "mobile",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:mobile": "npm run start --workspace=mobile",
+    "lint": "turbo run lint",
+    "build": "turbo run build"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
