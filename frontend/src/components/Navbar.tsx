@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HeartPulse, LogOut, User, ShieldCheck } from 'lucide-react';
+import { HeartPulse, LogOut, User } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { utilisateur, estConnecte, deconnexion } = useAuth();

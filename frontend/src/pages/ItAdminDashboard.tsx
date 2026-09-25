@@ -13,7 +13,6 @@ import {
   Lock,
   X,
   UserCheck,
-  AlertCircle,
 } from 'lucide-react';
 
 export const ItAdminDashboard: React.FC = () => {
