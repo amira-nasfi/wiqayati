@@ -1,24 +1,63 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Activity,
   Sparkles,
   HeartPulse,
+  User,
+  Lock,
+  AlertCircle,
+  Loader2,
   X,
   Info,
   HelpCircle,
   Mail,
   ShieldCheck,
+  ArrowRight,
   ChevronDown,
   ClipboardCheck,
   Salad,
   LogIn,
-  ArrowRight,
 } from 'lucide-react';
 
-export const WelcomePage: React.FC = () => {
+export const WelcomeLoginPage: React.FC = () => {
+  const [identifiant, setIdentifiant] = useState('');
+  const [motDePasse, setMotDePasse] = useState('');
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [chargement, setChargement] = useState(false);
+  const [modalActive, setModalActive] = useState<'apropos' | 'comment' | 'contact' | 'login' | null>(null);
+
+  const { connexion } = useAuth();
   const navigate = useNavigate();
-  const [modalActive, setModalActive] = useState<'apropos' | 'comment' | 'contact' | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!identifiant.trim() || !motDePasse) {
+      setErreur("Veuillez renseigner votre identifiant et votre mot de passe.");
+      return;
+    }
+    setErreur(null);
+    setChargement(true);
+    try {
+      const res = await connexion(identifiant, motDePasse);
+      if (res.succes && res.redirection) {
+        navigate(res.redirection);
+      } else {
+        setErreur(res.erreur || "Échec de connexion. Vérifiez vos identifiants.");
+      }
+    } catch {
+      setErreur("Erreur réseau. Vérifiez que le serveur backend est en marche.");
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  const preRemplir = (id: string, mdp: string = 'Wiqayati2026!') => {
+    setIdentifiant(id);
+    setMotDePasse(mdp);
+    setErreur(null);
+  };
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -55,7 +94,7 @@ export const WelcomePage: React.FC = () => {
             top: 0,
             zIndex: 50,
             width: '100%',
-            backgroundColor: 'rgba(255, 255, 255, 0.94)',
+            backgroundColor: 'rgba(255, 255, 255, 0.92)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             borderBottom: '1px solid rgba(19, 75, 101, 0.08)',
@@ -121,7 +160,7 @@ export const WelcomePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Navigation Links & Bouton Se connecter */}
+          {/* Navigation Links & Action */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
             <nav style={{ display: 'flex', alignItems: 'center', gap: '1.8rem' }}>
               <button
@@ -193,23 +232,23 @@ export const WelcomePage: React.FC = () => {
               </button>
             </nav>
 
-            {/* Bouton d'accès vers la page de connexion */}
+            {/* Bouton Se Connecter Principal */}
             <button
               type="button"
-              onClick={() => navigate('/connexion')}
+              onClick={() => scrollToSection('espace-connexion')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
                 backgroundColor: '#134B65',
                 color: '#FFFFFF',
-                padding: '0.6rem 1.25rem',
+                padding: '0.55rem 1.15rem',
                 borderRadius: '8px',
                 fontSize: '0.88rem',
                 fontWeight: 600,
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(19, 75, 101, 0.22)',
+                boxShadow: '0 2px 6px rgba(19, 75, 101, 0.2)',
                 transition: 'all 0.15s',
               }}
               onMouseEnter={(e) => {
@@ -227,7 +266,7 @@ export const WelcomePage: React.FC = () => {
           </div>
         </header>
 
-        {/* ── 2. HERO SECTION ÉPURÉE & HARMONIEUSE ── */}
+        {/* ── 2. HERO SECTION AVEC L'IMAGE DE FOND PROPRE ── */}
         <section
           style={{
             position: 'relative',
@@ -239,12 +278,12 @@ export const WelcomePage: React.FC = () => {
             backgroundRepeat: 'no-repeat',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'flex-end', // Placement sur la zone claire à droite
             padding: '3rem 5rem',
             boxSizing: 'border-box',
           }}
         >
-          {/* Léger fondu doux pour lisibilité */}
+          {/* Léger dégradé subtil pour rehausser la lisibilité sans altérer la photo */}
           <div
             style={{
               position: 'absolute',
@@ -254,7 +293,7 @@ export const WelcomePage: React.FC = () => {
             }}
           />
 
-          {/* Contenu textuel dans l'espace dégagé à droite */}
+          {/* Contenu textuel & actions dans l'espace clair à droite */}
           <div
             style={{
               position: 'relative',
@@ -262,10 +301,10 @@ export const WelcomePage: React.FC = () => {
               maxWidth: '560px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '1.35rem',
+              gap: '1.25rem',
             }}
           >
-            {/* Badge de dépistage sans mention de ministère */}
+            {/* Badge de dépistage */}
             <div
               style={{
                 display: 'inline-flex',
@@ -302,7 +341,7 @@ export const WelcomePage: React.FC = () => {
               <span style={{ color: '#134B65' }}>pour une vie plus saine »</span>
             </h1>
 
-            {/* Description clinique */}
+            {/* Description clinique claire */}
             <p
               style={{
                 fontSize: '1.05rem',
@@ -323,7 +362,7 @@ export const WelcomePage: React.FC = () => {
                 display: 'flex',
                 flexWrap: 'wrap',
                 gap: '0.65rem',
-                margin: '0.3rem 0',
+                margin: '0.5rem 0',
               }}
             >
               {[
@@ -337,11 +376,11 @@ export const WelcomePage: React.FC = () => {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.45rem',
-                    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
                     backdropFilter: 'blur(4px)',
                     border: '1px solid rgba(19, 75, 101, 0.12)',
                     borderRadius: '8px',
-                    padding: '0.45rem 0.85rem',
+                    padding: '0.45rem 0.8rem',
                     fontSize: '0.84rem',
                     fontWeight: 600,
                     color: '#0B2535',
@@ -354,37 +393,67 @@ export const WelcomePage: React.FC = () => {
               ))}
             </div>
 
-            {/* Bouton unique vers la démarche (le bouton d'accès au login est déjà clairement dans la navbar) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.6rem' }}>
+            {/* Actions CTA */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => scrollToSection('espace-connexion')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  backgroundColor: '#134B65',
+                  color: '#FFFFFF',
+                  padding: '0.85rem 1.6rem',
+                  borderRadius: '10px',
+                  fontSize: '0.96rem',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(19, 75, 101, 0.25)',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#0E364A';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#134B65';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <span>Accéder à mon espace</span>
+                <ArrowRight size={17} />
+              </button>
+
               <button
                 type="button"
                 onClick={() => scrollToSection('comment-ca-marche')}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  backgroundColor: '#FFFFFF',
+                  gap: '0.4rem',
+                  backgroundColor: 'rgba(255, 255, 255, 0.85)',
                   color: '#134B65',
-                  padding: '0.85rem 1.4rem',
+                  padding: '0.85rem 1.3rem',
                   borderRadius: '10px',
-                  fontSize: '0.94rem',
+                  fontSize: '0.92rem',
                   fontWeight: 600,
-                  border: '1.5px solid rgba(19, 75, 101, 0.22)',
+                  border: '1px solid rgba(19, 75, 101, 0.2)',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(11, 37, 53, 0.05)',
                   transition: 'all 0.15s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F0F7FA';
+                  e.currentTarget.style.backgroundColor = '#FFFFFF';
                   e.currentTarget.style.borderColor = '#134B65';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF';
-                  e.currentTarget.style.borderColor = 'rgba(19, 75, 101, 0.22)';
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.85)';
+                  e.currentTarget.style.borderColor = 'rgba(19, 75, 101, 0.2)';
                 }}
               >
-                <span>Découvrir la démarche</span>
-                <ChevronDown size={17} />
+                <span>En savoir plus</span>
+                <ChevronDown size={16} />
               </button>
             </div>
           </div>
@@ -394,7 +463,7 @@ export const WelcomePage: React.FC = () => {
         <section
           id="comment-ca-marche"
           style={{
-            padding: '5.5rem 4rem',
+            padding: '5rem 4rem',
             backgroundColor: '#FFFFFF',
             borderTop: '1px solid #E5EEF2',
             borderBottom: '1px solid #E5EEF2',
@@ -416,7 +485,7 @@ export const WelcomePage: React.FC = () => {
               <h2
                 style={{
                   fontFamily: "'Outfit', sans-serif",
-                  fontSize: '2.2rem',
+                  fontSize: '2.1rem',
                   fontWeight: 700,
                   color: '#0B2535',
                   marginTop: '0.4rem',
@@ -425,16 +494,16 @@ export const WelcomePage: React.FC = () => {
               >
                 Comment fonctionne le dépistage WiQayati ?
               </h2>
-              <p style={{ color: '#4A7186', fontSize: '1.02rem', maxWidth: '640px', margin: '0.75rem auto 0', lineHeight: 1.5 }}>
-                Un processus éprouvé en trois étapes simples pour identifier les risques silencieux
-                et agir avant l’apparition du diabète.
+              <p style={{ color: '#4A7186', fontSize: '1rem', maxWidth: '620px', margin: '0.75rem auto 0' }}>
+                Un processus éprouvé en trois étapes pour identifier les risques silencieux
+                et agir avant l’apparition de la maladie.
               </p>
             </div>
 
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                 gap: '2rem',
               }}
             >
@@ -442,22 +511,25 @@ export const WelcomePage: React.FC = () => {
                 {
                   etape: '01',
                   titre: 'Questionnaire Clinique',
-                  desc: 'Évaluation rapide des antécédents, de l’IMC, du tour de taille et des habitudes de vie (activité physique, consommation de légumes).',
+                  desc: 'Évaluation rapide des antécédents, de l’IMC, du périmètre ombilical et des habitudes de vie (activité physique, consommation de fruits et légumes).',
                   icon: <ClipboardCheck size={24} color="#134B65" />,
+                  couleur: '#134B65',
                   fond: '#EDF5F9',
                 },
                 {
                   etape: '02',
                   titre: 'Calcul du Risque (FINDRISC)',
-                  desc: 'Le modèle clinique calcule instantanément le niveau de risque à 10 ans et classe le patient : risque faible, modéré ou élevé.',
+                  desc: 'Le modèle clinique calcule instantanément le score de risque à 10 ans et classe le patient : risque faible, intermédiaire ou élevé.',
                   icon: <Activity size={24} color="#1F8A70" />,
+                  couleur: '#1F8A70',
                   fond: '#EAF6F3',
                 },
                 {
                   etape: '03',
                   titre: 'Plan Nutritionnel & Suivi',
-                  desc: 'Le nutritionniste consulte le dossier et valide un plan d’action hygiéno-diététique personnalisé transmis directement sur le mobile.',
+                  desc: 'Le nutritionniste consulte le dossier et valide un plan hygiéno-diététique personnalisé transmis directement sur le mobile du patient.',
                   icon: <Salad size={24} color="#134B65" />,
+                  couleur: '#134B65',
                   fond: '#EDF5F9',
                 },
               ].map((c) => (
@@ -467,7 +539,7 @@ export const WelcomePage: React.FC = () => {
                     backgroundColor: '#F8FCFD',
                     border: '1px solid #DCEAF0',
                     borderRadius: '16px',
-                    padding: '2.25rem 1.85rem',
+                    padding: '2rem 1.75rem',
                     position: 'relative',
                     transition: 'transform 0.15s, box-shadow 0.15s',
                   }}
@@ -510,7 +582,7 @@ export const WelcomePage: React.FC = () => {
                   <h3
                     style={{
                       fontFamily: "'Outfit', sans-serif",
-                      fontSize: '1.25rem',
+                      fontSize: '1.2rem',
                       fontWeight: 700,
                       color: '#0B2535',
                       marginBottom: '0.65rem',
@@ -518,77 +590,326 @@ export const WelcomePage: React.FC = () => {
                   >
                     {c.titre}
                   </h3>
-                  <p style={{ color: '#4A7186', fontSize: '0.92rem', lineHeight: 1.6, margin: 0 }}>
+                  <p style={{ color: '#4A7186', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
                     {c.desc}
                   </p>
                 </div>
               ))}
             </div>
+          </div>
+        </section>
 
-            {/* Bannière d'accès vers la connexion en bas de page */}
-            <div
+        {/* ── 4. SECTION : ESPACE DE CONNEXION SÉCURISÉ ── */}
+        <section
+          id="espace-connexion"
+          style={{
+            padding: '5rem 2rem',
+            backgroundColor: '#F3F8FA',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: '2.5rem', maxWidth: '520px' }}>
+            <span
               style={{
-                marginTop: '4.5rem',
-                backgroundColor: '#EDF6F9',
-                border: '1px solid #D2E7ED',
-                borderRadius: '16px',
-                padding: '2.5rem 3rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1.5rem',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                color: '#134B65',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
               }}
             >
-              <div>
-                <h3
+              Accès Plateforme
+            </span>
+            <h2
+              style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontSize: '2rem',
+                fontWeight: 700,
+                color: '#0B2535',
+                marginTop: '0.35rem',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Espace de Connexion
+            </h2>
+            <p style={{ color: '#4A7186', fontSize: '0.92rem', marginTop: '0.4rem', lineHeight: 1.5 }}>
+              Connectez-vous à votre portail professionnel ou citoyen avec vos identifiants sécurisés.
+            </p>
+          </div>
+
+          {/* Formulaire de connexion propre et spacieux */}
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '430px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '18px',
+              border: '1px solid #D6E6ED',
+              boxShadow: '0 10px 30px rgba(11, 37, 53, 0.07)',
+              padding: '2.25rem 2rem',
+              boxSizing: 'border-box',
+            }}
+          >
+            {erreur && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.55rem',
+                  padding: '0.75rem 0.9rem',
+                  backgroundColor: '#FDF2F2',
+                  border: '1px solid #F2C2C2',
+                  borderRadius: '8px',
+                  color: '#7A2626',
+                  fontSize: '0.84rem',
+                  marginBottom: '1.25rem',
+                  lineHeight: 1.4,
+                }}
+              >
+                <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
+                <div>{erreur}</div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              {/* Identifiant */}
+              <div style={{ marginBottom: '1.1rem' }}>
+                <label
+                  htmlFor="identifiant-form"
                   style={{
-                    fontFamily: "'Outfit', sans-serif",
-                    fontSize: '1.35rem',
+                    display: 'block',
+                    fontSize: '0.83rem',
                     fontWeight: 700,
                     color: '#0B2535',
-                    margin: '0 0 0.35rem 0',
+                    marginBottom: '0.4rem',
                   }}
                 >
-                  Vous disposez d'un compte WiQayati ?
-                </h3>
-                <p style={{ margin: 0, color: '#4A7186', fontSize: '0.92rem' }}>
-                  Accédez à votre espace sécurisé pour consulter les dépistages ou renseigner un suivi.
-                </p>
+                  Identifiant / Nom d'utilisateur
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '0.85rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#6A96A8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <User size={16} />
+                  </div>
+                  <input
+                    id="identifiant-form"
+                    type="text"
+                    style={{
+                      width: '100%',
+                      padding: '0.68rem 0.85rem 0.68rem 2.45rem',
+                      border: '1.5px solid #CADEE6',
+                      borderRadius: '8px',
+                      fontSize: '0.92rem',
+                      color: '#0B2535',
+                      backgroundColor: '#F9FCFD',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      transition: 'border-color 0.15s',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#134B65';
+                      e.target.style.backgroundColor = '#FFFFFF';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#CADEE6';
+                      e.target.style.backgroundColor = '#F9FCFD';
+                    }}
+                    placeholder="ex: agent_campagne ou INS"
+                    value={identifiant}
+                    onChange={(e) => setIdentifiant(e.target.value)}
+                  />
+                </div>
               </div>
 
+              {/* Mot de passe */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label
+                  htmlFor="mdp-form"
+                  style={{
+                    display: 'block',
+                    fontSize: '0.83rem',
+                    fontWeight: 700,
+                    color: '#0B2535',
+                    marginBottom: '0.4rem',
+                  }}
+                >
+                  Mot de passe
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '0.85rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#6A96A8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Lock size={16} />
+                  </div>
+                  <input
+                    id="mdp-form"
+                    type="password"
+                    style={{
+                      width: '100%',
+                      padding: '0.68rem 0.85rem 0.68rem 2.45rem',
+                      border: '1.5px solid #CADEE6',
+                      borderRadius: '8px',
+                      fontSize: '0.92rem',
+                      color: '#0B2535',
+                      backgroundColor: '#F9FCFD',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      transition: 'border-color 0.15s',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#134B65';
+                      e.target.style.backgroundColor = '#FFFFFF';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#CADEE6';
+                      e.target.style.backgroundColor = '#F9FCFD';
+                    }}
+                    placeholder="Votre mot de passe"
+                    value={motDePasse}
+                    onChange={(e) => setMotDePasse(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Bouton de soumission */}
               <button
-                type="button"
-                onClick={() => navigate('/connexion')}
+                type="submit"
+                disabled={chargement}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.55rem',
+                  width: '100%',
+                  padding: '0.8rem 1.25rem',
+                  borderRadius: '9px',
                   backgroundColor: '#134B65',
                   color: '#FFFFFF',
-                  padding: '0.8rem 1.6rem',
-                  borderRadius: '10px',
-                  fontSize: '0.94rem',
+                  fontSize: '0.95rem',
                   fontWeight: 700,
                   border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 3px 10px rgba(19, 75, 101, 0.2)',
+                  cursor: chargement ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  fontFamily: 'inherit',
                   transition: 'background-color 0.15s',
+                  opacity: chargement ? 0.7 : 1,
+                  boxShadow: '0 3px 10px rgba(19, 75, 101, 0.2)',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0E364A')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#134B65')}
+                onMouseEnter={(e) => { if (!chargement) e.currentTarget.style.backgroundColor = '#0E364A'; }}
+                onMouseLeave={(e) => { if (!chargement) e.currentTarget.style.backgroundColor = '#134B65'; }}
               >
-                <span>Accéder à l'espace de connexion</span>
-                <ArrowRight size={17} />
+                {chargement ? (
+                  <>
+                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span>Connexion en cours...</span>
+                  </>
+                ) : (
+                  <span>Se connecter</span>
+                )}
               </button>
+            </form>
+
+            {/* Démo rapide sans Ministère */}
+            <div
+              style={{
+                marginTop: '1.75rem',
+                paddingTop: '1.4rem',
+                borderTop: '1px solid #E8F0F3',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  color: '#6A96A8',
+                  textAlign: 'center',
+                  marginBottom: '0.65rem',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Comptes de test & démonstration
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', justifyContent: 'center' }}>
+                {[
+                  { label: 'Agent Campagne', id: 'agent_campagne', mdp: 'Wiqayati2026!' },
+                  { label: 'Agent Soins', id: 'agent_soins', mdp: 'Wiqayati2026!' },
+                  { label: 'Nutritionniste', id: 'nutritionniste1', mdp: 'Wiqayati2026!' },
+                  { label: 'Admin IT', id: 'admin_it', mdp: 'Wiqayati2026!' },
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => preRemplir(c.id, c.mdp)}
+                    style={{
+                      fontSize: '0.74rem',
+                      padding: '4px 9px',
+                      backgroundColor: '#EDF5F9',
+                      borderRadius: '6px',
+                      color: '#134B65',
+                      fontWeight: 600,
+                      border: '1px solid #CADEE6',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      transition: 'background-color 0.12s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#D8EBF3')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#EDF5F9')}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => preRemplir('TUN10002002', '1234')}
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '4px 9px',
+                    backgroundColor: '#EAF6F3',
+                    borderRadius: '6px',
+                    color: '#12543D',
+                    fontWeight: 700,
+                    border: '1px solid #A8D8C6',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'background-color 0.12s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#B8E2D5')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#EAF6F3')}
+                >
+                  Citoyen (PIN 1234)
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── 4. FOOTER PROFESSIONNEL ── */}
+        {/* ── 5. FOOTER PROFESSIONNEL SANS MENTION MINISTÈRE ── */}
         <footer
           style={{
-            padding: '2.25rem 4rem',
+            padding: '2rem 4rem',
             backgroundColor: '#0B2535',
             color: '#B0C8D4',
             display: 'flex',
@@ -596,7 +917,7 @@ export const WelcomePage: React.FC = () => {
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '1rem',
-            fontSize: '0.85rem',
+            fontSize: '0.84rem',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -604,7 +925,7 @@ export const WelcomePage: React.FC = () => {
             <span>—</span>
             <span>Plateforme de dépistage précoce du diabète de type 2</span>
           </div>
-          <div style={{ display: 'flex', gap: '1.75rem', fontSize: '0.82rem' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.8rem' }}>
             <button
               type="button"
               onClick={() => setModalActive('apropos')}
@@ -694,7 +1015,7 @@ export const WelcomePage: React.FC = () => {
               <div style={{ fontSize: '0.92rem', color: '#2E5163', lineHeight: 1.65 }}>
                 {modalActive === 'apropos' && (
                   <p>
-                    WiQayati est une solution de santé préventive dédiée à l'anticipation
+                    WiQayati est une solution innovante de santé préventive dédiée à l'anticipation
                     et au dépistage précoce du diabète de type 2. La plateforme relie les intervenants
                     de santé de proximité, les nutritionnistes et les citoyens autour d'un suivi
                     personnalisé axé sur le bien-être durable.
@@ -739,6 +1060,13 @@ export const WelcomePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 };

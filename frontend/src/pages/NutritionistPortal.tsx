@@ -3,8 +3,7 @@ import api from '../api/client';
 import {
   CheckCircle,
   XCircle,
-  Edit3,
-  ChevronRight,
+  FileEdit,
   Loader2
 } from 'lucide-react';
 
@@ -31,7 +30,7 @@ export const NutritionistPortal: React.FC = () => {
       const resp = await api.get('/nutritionniste/file/');
       setTaches(resp.data.results || resp.data);
     } catch {
-      setMessageAction("Erreur lors du chargement de la file.");
+      setMessageAction("Erreur lors du chargement de la file clinique.");
     } finally {
       setChargement(false);
     }
@@ -44,7 +43,6 @@ export const NutritionistPortal: React.FC = () => {
   const ouvrirDossier = async (planId: string, tacheId: string) => {
     setMessageAction(null);
     try {
-      // Si la tâche est encore en DEMANDE, la prendre en charge automatiquement
       await api.post(`/nutritionniste/file/${tacheId}/prendre-en-charge/`);
       const resp = await api.get(`/nutritionniste/plans/${planId}/`);
       const plan = resp.data;
@@ -55,7 +53,7 @@ export const NutritionistPortal: React.FC = () => {
       setPlanActiviteTitre(plan.plan_activite?.titre || '');
       chargerFile();
     } catch {
-      setMessageAction("Erreur lors de l'ouverture du dossier.");
+      setMessageAction("Impossible d'ouvrir ce dossier médical.");
     }
   };
 
@@ -76,9 +74,9 @@ export const NutritionistPortal: React.FC = () => {
         },
       });
       setPlanEnEdition(resp.data);
-      setMessageAction("Modifications enregistrées en brouillon.");
+      setMessageAction("Modifications enregistrées dans le dossier patient.");
     } catch {
-      setMessageAction("Erreur lors de la sauvegarde.");
+      setMessageAction("Échec de l'enregistrement du brouillon.");
     } finally {
       setSauvegardeEnCours(false);
     }
@@ -88,15 +86,13 @@ export const NutritionistPortal: React.FC = () => {
     if (!planEnEdition) return;
     setSauvegardeEnCours(true);
     try {
-      // 1. Sauvegarder d'abord les éventuelles modifications
       await handleSauvegarderModifications();
-      // 2. Valider
       const resp = await api.post(`/nutritionniste/plans/${planEnEdition.id}/valider/`);
-      setMessageAction(resp.data.message || "Plan validé avec succès.");
+      setMessageAction(resp.data.message || "Plan de soin validé et transmis au citoyen.");
       setPlanEnEdition(null);
       chargerFile();
     } catch {
-      setMessageAction("Erreur lors de la validation du plan.");
+      setMessageAction("Erreur lors de la validation clinique du plan.");
     } finally {
       setSauvegardeEnCours(false);
     }
@@ -106,175 +102,223 @@ export const NutritionistPortal: React.FC = () => {
     if (!planEnEdition || !motifRejet.trim()) return;
     setSauvegardeEnCours(true);
     try {
-      const resp = await api.post(`/nutritionniste/plans/${planEnEdition.id}/rejeter/`, {
-        motif: motifRejet,
+      await api.post(`/nutritionniste/plans/${planEnEdition.id}/rejeter/`, {
+        motif_rejet: motifRejet,
       });
-      setMessageAction(resp.data.message || "Le plan a été rejeté.");
-      setAfficheModalRejet(false);
+      setMessageAction("Dossier renvoyé à l'équipe de dépistage.");
       setPlanEnEdition(null);
+      setAfficheModalRejet(false);
+      setMotifRejet('');
       chargerFile();
     } catch {
-      setMessageAction("Erreur lors du rejet du plan.");
+      setMessageAction("Erreur lors du signalement de rejet.");
     } finally {
       setSauvegardeEnCours(false);
     }
   };
 
+  const getPrioriteStyle = (priorite: string) => {
+    switch (priorite) {
+      case 'STAT':
+        return {
+          bg: '#FDF2F2',
+          border: '#F2C2C2',
+          color: '#8F2626',
+          label: 'STAT · Prise en charge immédiate',
+        };
+      case 'URGENT':
+        return {
+          bg: '#FCF6EC',
+          border: '#F0D5AC',
+          color: '#7A4608',
+          label: 'URGENT · 48 heures',
+        };
+      default:
+        return {
+          bg: '#EBF7F2',
+          border: '#BFE4D5',
+          color: '#12543D',
+          label: 'ROUTINE · Suivi programmé',
+        };
+    }
+  };
+
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 0 3rem' }}>
-      {/* En-tête */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f2c59', marginBottom: '0.4rem' }}>
-          File de Priorité des Nutritionnistes
+      {/* En-tête clinique sobre et institutionnel */}
+      <div style={{ marginBottom: '1.75rem' }}>
+        <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--text-ink)', marginBottom: '0.35rem' }}>
+          File de priorisation nutritionnelle
         </h1>
-        <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-          Ordonnancement national par niveau de risque : <strong>STAT (Élevé)</strong> → <strong>URGENT (Intermédiaire)</strong> → <strong>ROUTINE (Faible)</strong>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+          Triage national selon l'évaluation du risque diabète : STAT (Élevé) · URGENT (Intermédiaire) · ROUTINE (Faible)
         </p>
       </div>
 
       {messageAction && (
         <div style={{
-          padding: '0.85rem 1rem',
-          borderRadius: '10px',
-          background: '#eff6ff',
-          color: '#1e40af',
-          border: '1px solid #bfdbfe',
+          padding: '0.75rem 1rem',
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--surface-highlight)',
+          color: 'var(--primary-slate)',
+          border: '1px solid var(--border-subtle)',
           marginBottom: '1.5rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem'
+          gap: '0.6rem',
+          fontSize: '0.9rem',
+          fontWeight: 500,
         }}>
-          <CheckCircle size={18} />
+          <CheckCircle size={16} color="var(--accent-mint)" />
           <span>{messageAction}</span>
         </div>
       )}
 
-      {/* Vue 2 colonnes si un dossier est ouvert */}
-      <div style={{ display: 'grid', gridTemplateColumns: planEnEdition ? '1fr 1.25fr' : '1fr', gap: '2rem' }}>
-        {/* Colonne Gauche : File de priorité */}
+      {/* Disposition principale : File de gauche + Fiche de travail à droite */}
+      <div style={{ display: 'grid', gridTemplateColumns: planEnEdition ? '1fr 1.25fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
+        {/* Colonne gauche : Registre des tâches */}
         <div className="card">
           <div className="card-header">
-            <div className="card-title">
-              Tâches en attente ({taches.length})
+            <div>
+              <div className="card-title">Dossiers en attente d'arbitrage</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                {taches.length} patient(s) en file d'attente
+              </div>
             </div>
-            <button onClick={chargerFile} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-              Actualiser
+            <button
+              onClick={chargerFile}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '0.4rem 0.8rem' }}
+            >
+              Actualiser la file
             </button>
           </div>
 
           {chargement ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-              <Loader2 size={28} className="animate-spin" style={{ margin: '0 auto 0.5rem' }} />
-              <div>Chargement de la file...</div>
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+              <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 0.5rem', color: 'var(--primary-slate)' }} />
+              <div style={{ fontSize: '0.9rem' }}>Actualisation du registre...</div>
             </div>
           ) : taches.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-              Aucune tâche en attente dans la file.
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+              Aucun dossier en attente d'évaluation dans votre file.
             </div>
           ) : (
             <div className="table-container">
               <table className="table-modern">
                 <thead>
                   <tr>
-                    <th>Priorité</th>
-                    <th>Patient (INS)</th>
-                    <th>Risque</th>
+                    <th style={{ width: '110px' }}>Priorité</th>
+                    <th>Patient</th>
+                    <th>Risque calculé</th>
                     <th>Statut</th>
-                    <th>Action</th>
+                    <th style={{ textAlign: 'right' }}>Dossier</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {taches.map((t) => (
-                    <tr
-                      key={t.id}
-                      style={{
-                        background: planEnEdition?.id === t.plan_id ? '#eff6ff' : 'transparent',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <td>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.75rem',
-                          fontWeight: 800,
-                          background: t.priorite === 'STAT' ? '#fee2e2' : t.priorite === 'URGENT' ? '#fef3c7' : '#dcfce7',
-                          color: t.priorite === 'STAT' ? '#991b1b' : t.priorite === 'URGENT' ? '#92400e' : '#166534',
-                        }}>
-                          {t.priorite}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                          {t.patient.prenom} {t.patient.nom}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                          INS: {t.patient.ins} • {t.patient.gouvernorat}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge-risk ${t.niveau_risque}`} style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
-                          {t.niveau_risque} ({t.score_risque})
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: '0.8rem', color: '#475569' }}>
-                          {t.statut_libelle}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => ouvrirDossier(t.plan_id, t.id)}
-                          className="btn btn-primary"
-                          style={{ fontSize: '0.78rem', padding: '0.4rem 0.75rem' }}
-                        >
-                          <span>Examiner</span>
-                          <ChevronRight size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {taches.map((t) => {
+                    const estSelectionne = planEnEdition?.id === t.plan_id;
+                    const pStyle = getPrioriteStyle(t.priorite);
+
+                    return (
+                      <tr
+                        key={t.id}
+                        style={{
+                          backgroundColor: estSelectionne ? 'var(--surface-highlight)' : undefined,
+                          borderLeft: estSelectionne ? '3px solid var(--primary-slate)' : '3px solid transparent',
+                        }}
+                      >
+                        <td>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '3px 7px',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            backgroundColor: pStyle.bg,
+                            border: `1px solid ${pStyle.border}`,
+                            color: pStyle.color,
+                          }}>
+                            {t.priorite}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: 'var(--text-ink)' }}>
+                            {t.patient.prenom} {t.patient.nom}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            INS {t.patient.ins} · {t.patient.gouvernorat}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge-risk ${t.niveau_risque}`}>
+                            {t.niveau_risque} · Score {t.score_risque}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            {t.statut_libelle}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            onClick={() => ouvrirDossier(t.plan_id, t.id)}
+                            className={estSelectionne ? "btn btn-primary" : "btn btn-secondary"}
+                            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}
+                          >
+                            {estSelectionne ? 'En cours' : 'Consulter'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
 
-        {/* Colonne Droite : Examen du dossier et plan de soin */}
+        {/* Colonne droite : Fiche de consultation du patient et plan de soin */}
         {planEnEdition && (
-          <div className="card" style={{ borderColor: '#93c5fd', boxShadow: '0 8px 24px rgba(37, 99, 235, 0.1)' }}>
-            <div className="card-header" style={{ background: '#f8fafc', margin: '-1.75rem -1.75rem 1.5rem', padding: '1.25rem 1.75rem', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
+          <div className="card" style={{ border: '1px solid var(--border-medium)' }}>
+            <div className="card-header" style={{ alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f2c59' }}>
-                  Dossier : {planEnEdition.patient.prenom} {planEnEdition.patient.nom} (INS: {planEnEdition.patient.ins})
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-ink)' }}>
+                  Fiche patient : {planEnEdition.patient.prenom} {planEnEdition.patient.nom}
                 </div>
-                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                  {planEnEdition.patient.gouvernorat} • Né(e) le {planEnEdition.patient.date_naissance} • Genre : {planEnEdition.patient.genre === 'M' ? 'Masculin' : 'Féminin'}
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Identifiant INS {planEnEdition.patient.ins} · {planEnEdition.patient.gouvernorat} · Né(e) le {planEnEdition.patient.date_naissance}
                 </div>
               </div>
               <button
                 onClick={() => setPlanEnEdition(null)}
-                style={{ fontSize: '1.2rem', color: '#94a3b8', cursor: 'pointer' }}
+                style={{
+                  fontSize: '0.82rem',
+                  color: 'var(--text-secondary)',
+                  padding: '0.25rem 0.5rem',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
               >
-                ✕
+                Fermer
               </button>
             </div>
 
-            {/* Évaluation calculée */}
+            {/* Synthèse du dépistage */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '1rem',
-              background: '#f8fafc',
-              borderRadius: '10px',
-              marginBottom: '1.5rem',
-              border: '1px solid #e2e8f0'
+              padding: '0.85rem 1rem',
+              background: 'var(--surface-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: '1.25rem',
+              border: '1px solid var(--border-subtle)',
             }}>
               <div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Évaluation initiale du risque</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f2c59' }}>
-                  Score : {planEnEdition.evaluation_risque.score} / 100
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Évaluation initiale du risque</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-ink)' }}>
+                  Score FINDRISC {planEnEdition.evaluation_risque.score} / 100
                 </div>
               </div>
               <span className={`badge-risk ${planEnEdition.evaluation_risque.niveau_risque}`}>
@@ -282,19 +326,27 @@ export const NutritionistPortal: React.FC = () => {
               </span>
             </div>
 
-            {/* Facteurs contributifs */}
+            {/* Facteurs cliniques déterminants */}
             {planEnEdition.evaluation_risque.facteurs?.length > 0 && (
-              <div style={{ marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-                <strong style={{ color: '#334155' }}>Facteurs déterminants :</strong>
-                <ul style={{ paddingLeft: '1.2rem', marginTop: '0.35rem', color: '#475569' }}>
+              <div style={{
+                marginBottom: '1.25rem',
+                padding: '0.75rem 1rem',
+                backgroundColor: 'var(--surface-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                  Facteurs contributifs identifiés lors du dépistage :
+                </div>
+                <ul style={{ paddingLeft: '1.1rem', fontSize: '0.85rem', color: 'var(--text-ink)' }}>
                   {planEnEdition.evaluation_risque.facteurs.map((f: any, idx: number) => (
-                    <li key={idx}>{f.libelle}</li>
+                    <li key={idx} style={{ marginBottom: '2px' }}>{f.libelle}</li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {/* Formulaire d'édition du plan */}
+            {/* Formulaire clinique du plan */}
             <div style={{ marginBottom: '1.5rem' }}>
               <div className="form-group">
                 <label className="form-label">Titre du plan nutritionnel</label>
@@ -303,52 +355,60 @@ export const NutritionistPortal: React.FC = () => {
                   className="form-control"
                   value={planNutritionTitre}
                   onChange={(e) => setPlanNutritionTitre(e.target.value)}
+                  placeholder="Orientation diététique personnalisée"
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Conseils spécifiques du nutritionniste</label>
+                <label className="form-label">Consignes diététiques spécifiques</label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   className="form-control"
                   value={planNutritionConseils}
                   onChange={(e) => setPlanNutritionConseils(e.target.value)}
-                  placeholder="Conseils et consignes personnalisées..."
+                  placeholder="Indications sur les apports, index glycémique, répartition des repas..."
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Recommandations d'activité physique</label>
+                <label className="form-label">Recommandations d'activité physique adaptée</label>
                 <input
                   type="text"
                   className="form-control"
                   value={planActiviteTitre}
                   onChange={(e) => setPlanActiviteTitre(e.target.value)}
+                  placeholder="ex: Marche active quotidienne, étirements ciblés"
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Notes cliniques internes (confidentiel)</label>
+                <label className="form-label">Observations médicales internes (dossier soignant)</label>
                 <textarea
                   rows={2}
                   className="form-control"
                   value={notesNutritionniste}
                   onChange={(e) => setNotesNutritionniste(e.target.value)}
-                  placeholder="Observations sur l'état général et tolérance..."
+                  placeholder="Notes de suivi ou contre-indications éventuelles..."
                 />
               </div>
             </div>
 
-            {/* Boutons d'actions */}
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+            {/* Actions soignantes */}
+            <div style={{
+              display: 'flex',
+              gap: '0.75rem',
+              justifyContent: 'flex-end',
+              paddingTop: '1rem',
+              borderTop: '1px solid var(--border-subtle)',
+            }}>
               <button
                 type="button"
                 onClick={() => setAfficheModalRejet(true)}
                 className="btn btn-danger"
                 disabled={sauvegardeEnCours}
               >
-                <XCircle size={16} />
-                <span>Rejeter le plan</span>
+                <XCircle size={15} />
+                <span>Rejeter le dossier</span>
               </button>
 
               <button
@@ -357,18 +417,18 @@ export const NutritionistPortal: React.FC = () => {
                 className="btn btn-secondary"
                 disabled={sauvegardeEnCours}
               >
-                <Edit3 size={16} />
-                <span>Sauvegarder brouillon</span>
+                <FileEdit size={15} />
+                <span>Enregistrer brouillon</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleValiderPlan}
-                className="btn btn-success"
+                className="btn btn-accent"
                 disabled={sauvegardeEnCours}
               >
-                <CheckCircle size={16} />
-                <span>Valider le plan pour le citoyen</span>
+                <CheckCircle size={15} />
+                <span>Valider le plan de soin</span>
               </button>
             </div>
           </div>
@@ -383,29 +443,29 @@ export const NutritionistPortal: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(15, 23, 42, 0.5)',
+          background: 'rgba(20, 40, 47, 0.45)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 100,
-          padding: '1rem'
+          padding: '1rem',
         }}>
-          <div className="card" style={{ maxWidth: '500px', width: '100%' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#991b1b', marginBottom: '1rem' }}>
-              Motif du rejet du plan de soin
+          <div className="card" style={{ maxWidth: '480px', width: '100%', border: '1px solid var(--border-medium)' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--risk-eleve-text)', marginBottom: '0.75rem' }}>
+              Motif de renvoi du dossier
             </h3>
             <div className="form-group">
-              <label className="form-label">Veuillez indiquer la raison du rejet :</label>
+              <label className="form-label">Précisez la raison pour l'équipe de dépistage :</label>
               <textarea
                 rows={3}
                 required
                 className="form-control"
-                placeholder="ex: Données de dépistage incohérentes..."
+                placeholder="ex: Incohérence des mesures glycémiques ou antécédents non renseignés..."
                 value={motifRejet}
                 onChange={(e) => setMotifRejet(e.target.value)}
               />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
               <button
                 type="button"
                 onClick={() => setAfficheModalRejet(false)}
@@ -419,7 +479,7 @@ export const NutritionistPortal: React.FC = () => {
                 className="btn btn-danger"
                 disabled={!motifRejet.trim() || sauvegardeEnCours}
               >
-                Confirmer le rejet
+                Confirmer le renvoi
               </button>
             </div>
           </div>

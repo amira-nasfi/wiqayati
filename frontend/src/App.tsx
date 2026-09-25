@@ -1,5 +1,4 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { WelcomePage } from './pages/WelcomePage';
@@ -37,15 +36,16 @@ const RouteProtegee: React.FC<{
 };
 
 const AppContenu: React.FC = () => {
+  const location = useLocation();
+  const estPageAccueilOuConnexion = location.pathname === '/' || location.pathname === '/connexion';
+
   return (
     <div className="app-container">
-      <Navbar />
-      <main className="main-content">
+      {!estPageAccueilOuConnexion && <Navbar />}
+      <main className={estPageAccueilOuConnexion ? "" : "main-content"}>
         <Routes>
-          {/* Accueil public */}
+          {/* Accueil public & Connexion dédiée */}
           <Route path="/" element={<WelcomePage />} />
-
-          {/* Connexion unique pour tous les rôles */}
           <Route path="/connexion" element={<LoginPage />} />
 
           {/* Portail Agent (Campagne & Soins Primaires) */}

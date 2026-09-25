@@ -1,6 +1,6 @@
 /**
  * Écran Dossier Citoyen — Wiqayati Mobile
- * Affiche le profil et l'historique des dépistages du citoyen connecté.
+ * Profil de santé et historique des dépistages de risque diabète.
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../api/authContext';
 import apiMobile from '../api/client';
+import { WiqayatiTokens } from '../constants/theme';
 
 interface Evaluation {
   id: string;
@@ -23,10 +24,22 @@ interface Evaluation {
   niveau_risque_libelle: string;
 }
 
-const COULEUR_RISQUE: Record<string, { fond: string; texte: string }> = {
-  ELEVE:         { fond: '#fee2e2', texte: '#991b1b' },
-  INTERMEDIAIRE: { fond: '#fef3c7', texte: '#92400e' },
-  FAIBLE:        { fond: '#dcfce7', texte: '#166534' },
+const COULEUR_RISQUE: Record<string, { fond: string; texte: string; bordure: string }> = {
+  ELEVE: {
+    fond: WiqayatiTokens.colors.risk.eleve.surface,
+    texte: WiqayatiTokens.colors.risk.eleve.text,
+    bordure: WiqayatiTokens.colors.risk.eleve.border,
+  },
+  INTERMEDIAIRE: {
+    fond: WiqayatiTokens.colors.risk.intermediaire.surface,
+    texte: WiqayatiTokens.colors.risk.intermediaire.text,
+    bordure: WiqayatiTokens.colors.risk.intermediaire.border,
+  },
+  FAIBLE: {
+    fond: WiqayatiTokens.colors.risk.faible.surface,
+    texte: WiqayatiTokens.colors.risk.faible.text,
+    bordure: WiqayatiTokens.colors.risk.faible.border,
+  },
 };
 
 export default function DossierCitoyenScreen() {
@@ -42,7 +55,7 @@ export default function DossierCitoyenScreen() {
       const resp = await apiMobile.get('/citoyen/moi/historique-risques/');
       setHistorique(resp.data?.results ?? resp.data ?? []);
     } catch {
-      setErreur("Impossible de charger l'historique. Tirez pour réessayer.");
+      setErreur("Impossible de charger l'historique médical. Tirez vers le bas pour réessayer.");
     } finally {
       setChargement(false);
       setRafraichissement(false);
@@ -61,8 +74,8 @@ export default function DossierCitoyenScreen() {
   if (chargement) {
     return (
       <View style={styles.centreChargement}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.texteChargement}>Chargement de votre dossier…</Text>
+        <ActivityIndicator size="large" color={WiqayatiTokens.colors.primary} />
+        <Text style={styles.texteChargement}>Chargement de votre dossier médical…</Text>
       </View>
     );
   }
@@ -70,32 +83,46 @@ export default function DossierCitoyenScreen() {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={styles.contentContainer}
       refreshControl={
-        <RefreshControl refreshing={rafraichissement} onRefresh={handleRefresh} />
+        <RefreshControl
+          refreshing={rafraichissement}
+          onRefresh={handleRefresh}
+          tintColor={WiqayatiTokens.colors.primary}
+        />
       }
     >
-      {/* ── En-tête identité ── */}
+      {/* ── Fiche d'identité citoyenne ── */}
       <View style={styles.cardIdentite}>
         <View style={styles.badgeMinistere}>
-          <Text style={styles.badgeMinistereTexte}>🇹🇳 République Tunisienne · Ministère de la Santé</Text>
+          <Text style={styles.badgeMinistereTexte}>Ministère de la Santé · République Tunisienne</Text>
         </View>
+
         <View style={styles.avatarCercle}>
           <Text style={styles.avatarInitiales}>
             {profil?.prenom?.[0]}{profil?.nom?.[0]}
           </Text>
         </View>
+
         <Text style={styles.nomCitoyen}>{profil?.prenom} {profil?.nom}</Text>
-        <Text style={styles.insCitoyen}>INS : {profil?.ins}</Text>
-        <Text style={styles.infoCitoyen}>
-          {profil?.gouvernorat && `Gouvernorat : ${profil.gouvernorat}`}
-          {profil?.date_naissance && `  ·  Né(e) le ${new Date(profil.date_naissance).toLocaleDateString('fr-FR')}`}
-        </Text>
+        <Text style={styles.insCitoyen}>Identifiant National de Santé : {profil?.ins}</Text>
+
+        <View style={styles.ligneDetails}>
+          {profil?.gouvernorat ? (
+            <Text style={styles.infoCitoyen}>Gouvernorat : {profil.gouvernorat}</Text>
+          ) : null}
+          {profil?.date_naissance ? (
+            <Text style={styles.infoCitoyen}>
+              Date de naissance : {new Date(profil.date_naissance).toLocaleDateString('fr-FR')}
+            </Text>
+          ) : null}
+        </View>
       </View>
 
-      {/* ── Historique ── */}
+      {/* ── Historique des évaluations ── */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitre}>Historique des Dépistages</Text>
-        <Text style={styles.sectionSousTitre}>{historique.length} évaluation(s) enregistrée(s)</Text>
+        <Text style={styles.sectionTitre}>Historique des dépistages</Text>
+        <Text style={styles.sectionSousTitre}>{historique.length} évaluation(s)</Text>
       </View>
 
       {erreur && (
@@ -107,26 +134,29 @@ export default function DossierCitoyenScreen() {
       {historique.length === 0 && !erreur && (
         <View style={styles.etiquetteVide}>
           <Text style={styles.etiquetteVideTexte}>
-            Aucun dépistage enregistré pour le moment.{'\n'}
-            Utilisez l'onglet Auto-évaluation pour commencer.
+            Aucun dépistage enregistré dans votre dossier.{'\n'}
+            Effectuez votre premier bilan dans l'onglet Évaluation.
           </Text>
         </View>
       )}
 
       {historique.map((h) => {
-        const couleurs = COULEUR_RISQUE[h.niveau_risque] ?? COULEUR_RISQUE.FAIBLE;
+        const styleRisque = COULEUR_RISQUE[h.niveau_risque] ?? COULEUR_RISQUE.FAIBLE;
         return (
           <View key={h.id} style={styles.cardHistorique}>
             <View style={{ flex: 1 }}>
               <Text style={styles.dateEval}>
                 {new Date(h.evalue_le).toLocaleDateString('fr-FR', {
-                  day: '2-digit', month: 'long', year: 'numeric'
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
                 })}
               </Text>
-              <Text style={styles.scoreEval}>Score de risque : {h.score} / 100</Text>
+              <Text style={styles.scoreEval}>Score FINDRISC : {h.score} / 100</Text>
             </View>
-            <View style={[styles.badgeRisque, { backgroundColor: couleurs.fond }]}>
-              <Text style={[styles.badgeRisqueTexte, { color: couleurs.texte }]}>
+
+            <View style={[styles.badgeRisque, { backgroundColor: styleRisque.fond, borderColor: styleRisque.bordure }]}>
+              <Text style={[styles.badgeRisqueTexte, { color: styleRisque.texte }]}>
                 {h.niveau_risque_libelle ?? h.niveau_risque}
               </Text>
             </View>
@@ -136,85 +166,184 @@ export default function DossierCitoyenScreen() {
 
       {/* ── Déconnexion ── */}
       <TouchableOpacity style={styles.btnDeconnexion} onPress={seDeconnecter}>
-        <Text style={styles.btnDeconnexionTexte}>Se déconnecter</Text>
+        <Text style={styles.btnDeconnexionTexte}>Fermer la session sécurisée</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f6ff', padding: 16 },
-  centreChargement: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f6ff' },
-  texteChargement: { marginTop: 12, color: '#64748b', fontSize: 14 },
+  container: {
+    flex: 1,
+    backgroundColor: WiqayatiTokens.colors.canvas,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  centreChargement: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: WiqayatiTokens.colors.canvas,
+  },
+  texteChargement: {
+    marginTop: 12,
+    color: WiqayatiTokens.colors.textSecondary,
+    fontSize: 14,
+  },
 
   cardIdentite: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderRadius: WiqayatiTokens.radii.md,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
     padding: 20,
     marginBottom: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
   },
   badgeMinistere: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 20,
+    backgroundColor: WiqayatiTokens.colors.surfaceSubtle,
+    borderRadius: WiqayatiTokens.radii.sm,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.borderSubtle,
   },
-  badgeMinistereTexte: { fontSize: 10, color: '#2563eb', fontWeight: '700' },
+  badgeMinistereTexte: {
+    fontSize: 11,
+    color: WiqayatiTokens.colors.primary,
+    fontWeight: '600',
+  },
   avatarCercle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#2563eb',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: WiqayatiTokens.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
   },
-  avatarInitiales: { color: '#fff', fontSize: 22, fontWeight: '900' },
-  nomCitoyen: { fontSize: 22, fontWeight: '800', color: '#0f2c59', textAlign: 'center' },
-  insCitoyen: { fontSize: 13, fontWeight: '700', color: '#64748b', marginTop: 4 },
-  infoCitoyen: { fontSize: 12, color: '#94a3b8', marginTop: 6, textAlign: 'center' },
+  avatarInitiales: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  nomCitoyen: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: WiqayatiTokens.colors.textPrimary,
+    textAlign: 'center',
+  },
+  insCitoyen: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: WiqayatiTokens.colors.textSecondary,
+    marginTop: 3,
+  },
+  ligneDetails: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  infoCitoyen: {
+    fontSize: 12,
+    color: WiqayatiTokens.colors.textMuted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
 
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 },
-  sectionTitre: { fontSize: 17, fontWeight: '800', color: '#0f2c59' },
-  sectionSousTitre: { fontSize: 12, color: '#94a3b8' },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  sectionTitre: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: WiqayatiTokens.colors.textPrimary,
+  },
+  sectionSousTitre: {
+    fontSize: 12,
+    color: WiqayatiTokens.colors.textSecondary,
+  },
 
-  alerteErreur: { backgroundColor: '#fef2f2', borderRadius: 10, padding: 12, marginBottom: 12 },
-  alerteErreurTexte: { color: '#b91c1c', fontSize: 13 },
+  alerteErreur: {
+    backgroundColor: WiqayatiTokens.colors.risk.eleve.surface,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.risk.eleve.border,
+    borderRadius: WiqayatiTokens.radii.sm,
+    padding: 12,
+    marginBottom: 12,
+  },
+  alerteErreurTexte: {
+    color: WiqayatiTokens.colors.risk.eleve.text,
+    fontSize: 13,
+  },
 
-  etiquetteVide: { backgroundColor: '#fff', borderRadius: 14, padding: 24, alignItems: 'center', marginBottom: 12 },
-  etiquetteVideTexte: { color: '#94a3b8', textAlign: 'center', fontSize: 13, lineHeight: 20 },
+  etiquetteVide: {
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
+    borderRadius: WiqayatiTokens.radii.md,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  etiquetteVideTexte: {
+    color: WiqayatiTokens.colors.textSecondary,
+    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 19,
+  },
 
   cardHistorique: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderRadius: WiqayatiTokens.radii.sm,
     padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: WiqayatiTokens.colors.border,
   },
-  dateEval: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
-  scoreEval: { fontSize: 12, color: '#64748b', marginTop: 3 },
-  badgeRisque: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 9999, marginLeft: 8 },
-  badgeRisqueTexte: { fontWeight: '800', fontSize: 12 },
+  dateEval: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: WiqayatiTokens.colors.textPrimary,
+  },
+  scoreEval: {
+    fontSize: 12,
+    color: WiqayatiTokens.colors.textSecondary,
+    marginTop: 2,
+  },
+  badgeRisque: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: WiqayatiTokens.radii.xs,
+    borderWidth: 1,
+    marginLeft: 8,
+  },
+  badgeRisqueTexte: {
+    fontWeight: '600',
+    fontSize: 11.5,
+  },
 
   btnDeconnexion: {
-    marginTop: 24,
-    marginBottom: 32,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#fecaca',
+    marginTop: 20,
+    marginBottom: 28,
+    padding: 12,
+    borderRadius: WiqayatiTokens.radii.sm,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
     alignItems: 'center',
-    backgroundColor: '#fef2f2',
+    backgroundColor: WiqayatiTokens.colors.surface,
   },
-  btnDeconnexionTexte: { color: '#b91c1c', fontWeight: '700', fontSize: 14 },
+  btnDeconnexionTexte: {
+    color: WiqayatiTokens.colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
 });
