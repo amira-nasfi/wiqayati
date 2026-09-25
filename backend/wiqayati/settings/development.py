@@ -5,7 +5,7 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'testserver']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'testserver', '192.168.1.6', '*']
 
 # Autoriser toutes les origines en développement (Vite: 5173, Expo web: 8081, 19006, etc.)
 CORS_ALLOW_ALL_ORIGINS = True

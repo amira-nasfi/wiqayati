@@ -6,15 +6,21 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-// URL de base : localhost pour web, 10.0.2.2 pour émulateur Android.
-// ⚠️ Pour Expo Go sur un appareil physique : remplacez LAN_IP par l'adresse
-//    IP locale de votre machine (ex: '192.168.1.10') et redémarrez le bundle.
-const LAN_IP = '172.19.112.1'; // ← IP LAN de la machine hôte (pour Expo Go physique)
+// URL de base :
+//   - 'web'     → localhost (navigateur sur la même machine)
+//   - 'android' → 10.0.2.2 (émulateur) ou IP Wi-Fi (appareil physique)
+//   - 'ios'     → IP Wi-Fi de la machine hôte (Expo Go physique)
+//
+// ⚠️ Si vous utilisez Expo Go sur un appareil physique, vérifiez que votre
+//    téléphone et votre PC sont sur le même réseau Wi-Fi.
+const HOST_LAN_IP = '192.168.1.6'; // IP Wi-Fi de la machine hôte
 
 export const BASE_API_URL =
-  Platform.OS === 'android'
-    ? `http://${LAN_IP === 'localhost' ? '10.0.2.2' : LAN_IP}:8000/api/v1`
-    : `http://${LAN_IP}:8000/api/v1`;
+  Platform.OS === 'web'
+    ? 'http://localhost:8000/api/v1'           // navigateur — même machine
+    : Platform.OS === 'android'
+      ? 'http://10.0.2.2:8000/api/v1'          // émulateur Android
+      : `http://${HOST_LAN_IP}:8000/api/v1`;  // Expo Go iOS ou Android physique
 
 export const CLE_TOKEN_ACCES   = 'wiqayati_access';
 export const CLE_TOKEN_REFRESH = 'wiqayati_refresh';
