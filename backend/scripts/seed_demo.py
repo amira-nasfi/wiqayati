@@ -46,6 +46,9 @@ from apps.accounts.models import CompteUtilisateur, Role, Notification  # noqa: 
 from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumission  # noqa: E402
 from apps.risk_engine.models import ResultatEvaluationRisque  # noqa: E402
 from apps.care_plan.models import PlanSoin, StatutPlan  # noqa: E402
+from apps.nutritionist_queue.models import (  # noqa: E402
+    TacheNutritionniste, PrioriteTache, StatutTache,
+)
 
 print("=" * 60)
 print("  WIQAYATI — Peuplement de la base de données de démo")
@@ -56,6 +59,7 @@ print("=" * 60)
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[1/6] Nettoyage des données existantes…")
 Notification.objects.all().delete()
+TacheNutritionniste.objects.all().delete()
 PlanSoin.objects.all().delete()
 ResultatEvaluationRisque.objects.all().delete()
 ReponseScreening.objects.all().delete()
@@ -438,6 +442,24 @@ with transaction.atomic():
             ),
         )
         plans_crees.append(plan)
+
+        # ── Tâche nutritionniste (file de tri) ──
+        priorite_map = {
+            'ELEVE':        PrioriteTache.STAT,
+            'INTERMEDIAIRE': PrioriteTache.URGENT,
+            'FAIBLE':       PrioriteTache.ROUTINE,
+        }
+        statut_tache_map = {
+            StatutPlan.VALIDE:    StatutTache.COMPLETE,
+            StatutPlan.REJETE:    StatutTache.REJETE,
+            StatutPlan.BROUILLON: StatutTache.DEMANDE,
+        }
+        TacheNutritionniste.objects.create(
+            plan_soin=plan,
+            priorite=priorite_map[niveau],
+            statut=statut_tache_map[statut_plan],
+            assigne_a=valideur,
+        )
 
         # ── Compte citoyen (pour les 5 premiers) ──
         if ins in CITOYENS_DATA:
