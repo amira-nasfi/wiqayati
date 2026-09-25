@@ -18,8 +18,13 @@ import {
 } from 'react-native';
 import { useAuth } from '../api/authContext';
 import { BASE_API_URL } from '../api/client';
+import { WiqayatiTokens } from '../constants/theme';
 
-export default function ConnexionScreen() {
+interface ConnexionScreenProps {
+  onRetour?: () => void;
+}
+
+export default function ConnexionScreen({ onRetour }: ConnexionScreenProps = {}) {
   const { seConnecter } = useAuth();
   const [ins, setIns]   = useState('');
   const [pin, setPin]   = useState('');
@@ -66,30 +71,36 @@ export default function ConnexionScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        {/* En-tête */}
+        {onRetour && (
+          <TouchableOpacity
+            style={styles.btnRetour}
+            onPress={onRetour}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.btnRetourTexte}>← Accueil</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* En-tête épuré */}
         <View style={styles.header}>
           <View style={styles.logoCircle}>
             <Text style={styles.logoText}>W</Text>
           </View>
           <Text style={styles.appNom}>Wiqayati</Text>
-          <Text style={styles.appSlogan}>وقايتي · وقايتك من السكري</Text>
-          <Text style={styles.appDesc}>
-            Plateforme tunisienne de dépistage précoce du diabète de type 2
-          </Text>
         </View>
 
         {/* Carte de connexion */}
         <Animated.View
           style={[styles.card, { transform: [{ translateX: shakeAnim }] }]}
         >
-          <Text style={styles.cardTitre}>Connexion à votre espace</Text>
+          <Text style={styles.cardTitre}>Espace Citoyen</Text>
           <Text style={styles.cardSousTitre}>
-            Utilisez votre Identifiant National de Santé (INS) et votre code PIN
+            Connectez-vous avec votre Identifiant National de Santé (INS)
           </Text>
 
           {erreur && (
             <View style={styles.alerteErreur}>
-              <Text style={styles.alerteErreurTexte}>⚠ {erreur}</Text>
+              <Text style={styles.alerteErreurTexte}>⚠️ {erreur}</Text>
             </View>
           )}
 
@@ -97,7 +108,7 @@ export default function ConnexionScreen() {
           <TextInput
             style={styles.input}
             placeholder="Ex : TUN10001234"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={WiqayatiTokens.colors.textMuted}
             value={ins}
             onChangeText={(t) => setIns(t.toUpperCase())}
             autoCapitalize="characters"
@@ -106,11 +117,11 @@ export default function ConnexionScreen() {
             editable={!chargement}
           />
 
-          <Text style={styles.label}>Code PIN à 4 chiffres</Text>
+          <Text style={styles.label}>Code PIN sécurisé (4 chiffres)</Text>
           <TextInput
             style={styles.input}
             placeholder="• • • •"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={WiqayatiTokens.colors.textMuted}
             value={pin}
             onChangeText={setPin}
             secureTextEntry
@@ -128,169 +139,152 @@ export default function ConnexionScreen() {
             activeOpacity={0.85}
           >
             {chargement ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={WiqayatiTokens.colors.textInverse} size="small" />
             ) : (
-              <Text style={styles.btnConnexionTexte}>Accéder à mon dossier →</Text>
+              <Text style={styles.btnConnexionTexte}>Accéder à mon espace →</Text>
             )}
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Pied */}
+        {/* Pied discret */}
         <View style={styles.pied}>
-          <Text style={styles.piedTexte}>
-            Ministère de la Santé · République Tunisienne
-          </Text>
           <Text style={styles.piedVersion}>Version 1.0.0</Text>
-          <Text style={[styles.piedVersion, { fontSize: 10, marginTop: 4, color: '#64748b' }]}>
-            Serveur : {BASE_API_URL}
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const BLEU_PRINCIPAL = '#2563eb';
-const BLEU_SOMBRE    = '#0f2c59';
-const GRIS_FOND      = '#f0f6ff';
-
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: GRIS_FOND,
+    backgroundColor: WiqayatiTokens.colors.canvas,
   },
   scroll: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
   },
+  btnRetour: {
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: WiqayatiTokens.radii.md,
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
+  },
+  btnRetourTexte: {
+    color: WiqayatiTokens.colors.primary,
+    ...WiqayatiTokens.typography.caption,
+    fontWeight: '700',
+  },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: BLEU_PRINCIPAL,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: WiqayatiTokens.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: BLEU_PRINCIPAL,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
+    borderWidth: 2,
+    borderColor: WiqayatiTokens.colors.surfaceHighlight,
+    ...WiqayatiTokens.shadows.elevated,
   },
   logoText: {
-    color: '#fff',
-    fontSize: 36,
+    color: WiqayatiTokens.colors.textInverse,
+    fontSize: 34,
     fontWeight: '900',
   },
   appNom: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: BLEU_SOMBRE,
-    letterSpacing: 1,
-  },
-  appSlogan: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 4,
-    fontStyle: 'italic',
-  },
-  appDesc: {
-    fontSize: 12,
-    color: '#94a3b8',
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 18,
-    maxWidth: 280,
+    color: WiqayatiTokens.colors.textPrimary,
+    ...WiqayatiTokens.typography.h1,
+    letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderRadius: WiqayatiTokens.radii.xl,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
+    ...WiqayatiTokens.shadows.card,
   },
   cardTitre: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: BLEU_SOMBRE,
+    color: WiqayatiTokens.colors.textPrimary,
+    ...WiqayatiTokens.typography.h2,
     marginBottom: 4,
   },
   cardSousTitre: {
-    fontSize: 13,
-    color: '#64748b',
+    color: WiqayatiTokens.colors.textSecondary,
+    ...WiqayatiTokens.typography.caption,
     lineHeight: 18,
     marginBottom: 20,
   },
   alerteErreur: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: WiqayatiTokens.colors.risk.eleve.surface,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 10,
+    borderColor: WiqayatiTokens.colors.risk.eleve.border,
+    borderRadius: WiqayatiTokens.radii.md,
     padding: 12,
     marginBottom: 16,
   },
   alerteErreurTexte: {
-    color: '#b91c1c',
-    fontSize: 13,
+    color: WiqayatiTokens.colors.risk.eleve.text,
+    ...WiqayatiTokens.typography.caption,
     fontWeight: '600',
   },
   label: {
-    fontSize: 13,
+    color: WiqayatiTokens.colors.textPrimary,
+    ...WiqayatiTokens.typography.caption,
     fontWeight: '700',
-    color: '#334155',
     marginBottom: 6,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
+    borderColor: WiqayatiTokens.colors.border,
+    borderRadius: WiqayatiTokens.radii.md,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 12,
     fontSize: 15,
     marginBottom: 16,
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
+    backgroundColor: WiqayatiTokens.colors.surfaceSubtle,
+    color: WiqayatiTokens.colors.textPrimary,
   },
   btnConnexion: {
-    backgroundColor: BLEU_PRINCIPAL,
+    backgroundColor: WiqayatiTokens.colors.primary,
     paddingVertical: 15,
-    borderRadius: 12,
+    borderRadius: WiqayatiTokens.radii.lg,
     alignItems: 'center',
-    marginTop: 4,
-    shadowColor: BLEU_PRINCIPAL,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    marginTop: 6,
+    ...WiqayatiTokens.shadows.elevated,
   },
   btnDesactive: {
     opacity: 0.7,
   },
   btnConnexionTexte: {
-    color: '#fff',
+    color: WiqayatiTokens.colors.textInverse,
     fontWeight: '800',
     fontSize: 15,
     letterSpacing: 0.3,
   },
   pied: {
     alignItems: 'center',
-    marginTop: 32,
-  },
-  piedTexte: {
-    fontSize: 12,
-    color: '#94a3b8',
+    marginTop: 24,
   },
   piedVersion: {
-    fontSize: 11,
-    color: '#cbd5e1',
-    marginTop: 4,
+    color: WiqayatiTokens.colors.textMuted,
+    ...WiqayatiTokens.typography.micro,
+  },
+  piedServeur: {
+    color: WiqayatiTokens.colors.textMuted,
+    ...WiqayatiTokens.typography.micro,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });
+

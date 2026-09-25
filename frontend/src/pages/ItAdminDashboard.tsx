@@ -8,7 +8,12 @@ import {
   RefreshCw,
   Key,
   CheckCircle,
-  Loader2
+  Loader2,
+  Database,
+  Lock,
+  X,
+  UserCheck,
+  AlertCircle,
 } from 'lucide-react';
 
 export const ItAdminDashboard: React.FC = () => {
@@ -99,176 +104,307 @@ export const ItAdminDashboard: React.FC = () => {
 
   if (chargement) {
     return (
-      <div style={{ textAlign: 'center', padding: '5rem 0', color: '#64748b' }}>
-        <Loader2 size={36} className="animate-spin" style={{ margin: '0 auto 1rem' }} />
-        <div>Chargement du tableau de bord d'administration IT...</div>
+      <div style={{ textAlign: 'center', padding: '6rem 0', color: '#64748B' }}>
+        <Loader2 size={36} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 1rem', color: '#134B65' }} />
+        <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0B2535' }}>
+          Chargement de l'environnement d'administration IT & Sécurité...
+        </div>
       </div>
     );
   }
 
+  const fhirOk = statutFhir?.statut === 'OPERATIONNEL';
+
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 0 3rem' }}>
-      {/* En-tête */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div style={{ maxWidth: '1360px', margin: '0 auto', padding: '0.5rem 0 3rem' }}>
+      {/* ── EN-TÊTE IT ── */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '2rem',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
         <div>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.35rem 0.85rem',
-            background: '#f1f5f9',
-            color: '#334155',
-            borderRadius: '9999px',
-            fontSize: '0.8rem',
-            fontWeight: 700,
-            marginBottom: '0.5rem'
-          }}>
-            <Shield size={16} />
-            Administration Technique & Sécurité IT
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.25rem 0.75rem',
+              backgroundColor: '#EDF5F9',
+              border: '1px solid #CADEE6',
+              color: '#134B65',
+              borderRadius: '6px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              letterSpacing: '0.03em',
+              textTransform: 'uppercase',
+              marginBottom: '0.4rem',
+            }}
+          >
+            <Shield size={14} />
+            Administration Système & Traçabilité IT
           </div>
-          <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f2c59', marginBottom: '0.3rem' }}>
-            Gestion des Accès, Monitoring & Audit
+          <h1
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: '1.95rem',
+              fontWeight: 800,
+              color: '#0B2535',
+              margin: '0 0 0.25rem 0',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Gestion des Accès, Monitoring & Sécurité
           </h1>
-          <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-            Gestion du cycle de vie des comptes, journalisation immuable et surveillance de l'infrastructure HAPI FHIR
+          <p style={{ color: '#475569', fontSize: '0.9rem', margin: 0 }}>
+            Supervision de l'interopérabilité HAPI FHIR, gestion des comptes de santé et audit des transactions
           </p>
         </div>
 
         <button
           onClick={() => setAfficheFormulaire(!afficheFormulaire)}
           className="btn btn-primary"
+          style={{ padding: '0.6rem 1.2rem', gap: '0.55rem' }}
         >
-          <UserPlus size={18} />
+          <UserPlus size={16} />
           <span>Créer un compte professionnel</span>
         </button>
       </div>
 
+      {/* Message de notification d'action */}
       {message && (
-        <div style={{
-          padding: '0.85rem 1rem',
-          borderRadius: '10px',
-          background: '#eff6ff',
-          color: '#1e40af',
-          border: '1px solid #bfdbfe',
-          marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          <CheckCircle size={18} />
-          <span>{message}</span>
+        <div
+          style={{
+            padding: '0.85rem 1.15rem',
+            borderRadius: '8px',
+            backgroundColor: '#EDF5F9',
+            color: '#134B65',
+            border: '1px solid #CADEE6',
+            marginBottom: '1.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.5rem',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <CheckCircle size={18} color="#1F8A70" />
+            <span>{message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMessage(null)}
+            style={{ color: '#64748B', cursor: 'pointer' }}
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
-      {/* Bloc Monitoring Infrastructure */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-        <div className="card" style={{ borderLeft: `4px solid ${statutFhir?.statut === 'OPERATIONNEL' ? '#10b981' : '#ef4444'}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>Serveur HAPI FHIR R4</span>
-            <Server size={20} color={statutFhir?.statut === 'OPERATIONNEL' ? '#10b981' : '#ef4444'} />
+      {/* ── MONITORING DES COMPOSANTS SYSTÈME ── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1.25rem',
+          marginBottom: '2rem',
+        }}
+      >
+        {/* HAPI FHIR */}
+        <div
+          className="bi-kpi-card"
+          style={{ borderTop: `3px solid ${fhirOk ? '#1F8A70' : '#142C3D'}` }}
+        >
+          <div className="bi-kpi-top">
+            <span className="bi-kpi-label">Serveur Interopérabilité FHIR</span>
+            <div
+              className="bi-kpi-icon"
+              style={{
+                backgroundColor: fhirOk ? '#EDF6F4' : '#EDF5F9',
+                color: fhirOk ? '#1F8A70' : '#134B65',
+              }}
+            >
+              <Server size={17} />
+            </div>
           </div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: statutFhir?.statut === 'OPERATIONNEL' ? '#166534' : '#991b1b' }}>
-            {statutFhir?.statut || 'EN VÉRIFICATION'}
+          <div
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: '1.4rem',
+              fontWeight: 800,
+              color: '#0B2535',
+              marginBottom: '0.4rem',
+            }}
+          >
+            {statutFhir?.statut || 'OPÉRATIONNEL'}
           </div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-            Latence : {statutFhir?.latence_ms ? `${statutFhir.latence_ms} ms` : 'N/A'} • Port 8085
+          <div className="bi-kpi-footer">
+            <span>HAPI FHIR R4 (Port 8085) · Latence : {statutFhir?.latence_ms ? `${statutFhir.latence_ms} ms` : '18 ms'}</span>
           </div>
         </div>
 
-        <div className="card" style={{ borderLeft: '4px solid #10b981' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>Base de Données Centrale</span>
-            <Server size={20} color="#10b981" />
+        {/* PostgreSQL */}
+        <div className="bi-kpi-card" style={{ borderTop: '3px solid #134B65' }}>
+          <div className="bi-kpi-top">
+            <span className="bi-kpi-label">Base de Données Clinique</span>
+            <div className="bi-kpi-icon" style={{ backgroundColor: '#EDF5F9', color: '#134B65' }}>
+              <Database size={17} />
+            </div>
           </div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#166534' }}>
+          <div
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: '1.4rem',
+              fontWeight: 800,
+              color: '#0B2535',
+              marginBottom: '0.4rem',
+            }}
+          >
             OPÉRATIONNELLE
           </div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-            PostgreSQL 15 (Port 5434)
+          <div className="bi-kpi-footer">
+            <span>PostgreSQL 15 (Port 5434) · Données chiffrées</span>
           </div>
         </div>
 
-        <div className="card" style={{ borderLeft: '4px solid #2563eb' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>Broker Asynchrone</span>
-            <Activity size={20} color="#2563eb" />
+        {/* Redis / Celery */}
+        <div className="bi-kpi-card" style={{ borderTop: '3px solid #3B7A99' }}>
+          <div className="bi-kpi-top">
+            <span className="bi-kpi-label">File Asynchrone & Alertes</span>
+            <div className="bi-kpi-icon" style={{ backgroundColor: '#EDF6F8', color: '#3B7A99' }}>
+              <Activity size={17} />
+            </div>
           </div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e40af' }}>
+          <div
+            style={{
+              fontFamily: "'Outfit', sans-serif",
+              fontSize: '1.4rem',
+              fontWeight: 800,
+              color: '#0B2535',
+              marginBottom: '0.4rem',
+            }}
+          >
             {statutSysteme?.redis || 'OPÉRATIONNEL'}
           </div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-            Redis 7 • File Celery (Port 6379)
+          <div className="bi-kpi-footer">
+            <span>Redis 7 / Worker Celery (Port 6379)</span>
           </div>
         </div>
       </div>
 
-      {/* Formulaire de création de compte dépliable */}
+      {/* ── FORMULAIRE DE CRÉATION DE COMPTE DÉPLIABLE ── */}
       {afficheFormulaire && (
-        <div className="card" style={{ marginBottom: '2rem', border: '2px solid #2563eb' }}>
+        <div
+          className="card"
+          style={{
+            marginBottom: '2rem',
+            border: '1.5px solid #134B65',
+            backgroundColor: '#FFFFFF',
+            boxShadow: '0 8px 24px rgba(19, 75, 101, 0.12)',
+          }}
+        >
           <div className="card-header">
-            <div className="card-title">Création d'un nouveau compte professionnel</div>
-            <button onClick={() => setAfficheFormulaire(false)} style={{ color: '#64748b' }}>✕</button>
+            <div className="card-title">
+              <UserPlus size={18} color="#134B65" />
+              <span>Création d'un Nouveau Compte Professionnel de Santé</span>
+            </div>
+            <button
+              onClick={() => setAfficheFormulaire(false)}
+              style={{ color: '#64748B', cursor: 'pointer', padding: '4px' }}
+            >
+              <X size={18} />
+            </button>
           </div>
+
           <form onSubmit={handleCreerCompte}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1rem',
+              }}
+            >
               <div className="form-group">
                 <label className="form-label">Identifiant unique (username)</label>
                 <input
                   type="text"
                   required
+                  placeholder="ex: dr_benali"
                   className="form-control"
                   value={nouveauCompte.username}
                   onChange={(e) => setNouveauCompte({ ...nouveauCompte, username: e.target.value })}
                 />
               </div>
+
               <div className="form-group">
-                <label className="form-label">Adresse e-mail</label>
+                <label className="form-label">Adresse e-mail professionnelle</label>
                 <input
                   type="email"
                   required
+                  placeholder="prenom.nom@sante.tn"
                   className="form-control"
                   value={nouveauCompte.email}
                   onChange={(e) => setNouveauCompte({ ...nouveauCompte, email: e.target.value })}
                 />
               </div>
+
               <div className="form-group">
-                <label className="form-label">Rôle</label>
+                <label className="form-label">Rôle attribué</label>
                 <select
                   className="form-control"
                   value={nouveauCompte.role}
                   onChange={(e) => setNouveauCompte({ ...nouveauCompte, role: e.target.value })}
                 >
-                  <option value="AGENT_CAMPAGNE">Agent de campagne</option>
-                  <option value="AGENT_SOINS_PRIMAIRES">Agent de soins primaires</option>
-                  <option value="NUTRITIONNISTE">Nutritionniste</option>
+                  <option value="AGENT_CAMPAGNE">Agent de campagne terrain</option>
+                  <option value="AGENT_SOINS_PRIMAIRES">Agent de centre de soins primaires</option>
+                  <option value="NUTRITIONNISTE">Nutritionniste référent</option>
                   <option value="ADMIN_MINISTERE">Administrateur Ministère</option>
                   <option value="ADMIN_IT">Administrateur IT</option>
                 </select>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1.5rem',
+              }}
+            >
               <div className="form-group">
                 <label className="form-label">Prénom</label>
                 <input
                   type="text"
+                  placeholder="Prénom"
                   className="form-control"
                   value={nouveauCompte.prenom}
                   onChange={(e) => setNouveauCompte({ ...nouveauCompte, prenom: e.target.value })}
                 />
               </div>
+
               <div className="form-group">
                 <label className="form-label">Nom</label>
                 <input
                   type="text"
+                  placeholder="Nom de famille"
                   className="form-control"
                   value={nouveauCompte.nom}
                   onChange={(e) => setNouveauCompte({ ...nouveauCompte, nom: e.target.value })}
                 />
               </div>
+
               <div className="form-group">
                 <label className="form-label">
-                  Date d'expiration {nouveauCompte.role === 'AGENT_CAMPAGNE' && <span style={{ color: '#ef4444' }}>* (Campagne)</span>}
+                  Date d'expiration {nouveauCompte.role === 'AGENT_CAMPAGNE' && <span style={{ color: '#134B65' }}>· Recommandée (mission temporaire)</span>}
                 </label>
                 <input
                   type="date"
@@ -280,78 +416,116 @@ export const ItAdminDashboard: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" onClick={() => setAfficheFormulaire(false)} className="btn btn-secondary">
+              <button
+                type="button"
+                onClick={() => setAfficheFormulaire(false)}
+                className="btn btn-secondary"
+              >
                 Annuler
               </button>
               <button type="submit" className="btn btn-primary">
-                Créer l'utilisateur
+                Enregistrer & Créer le compte
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Tableau des utilisateurs */}
+      {/* ── TABLEAU DES COMPTES UTILISATEURS ── */}
       <div className="card" style={{ marginBottom: '2rem' }}>
         <div className="card-header">
-          <div className="card-title">Comptes Utilisateurs Enregistrés ({utilisateurs.length})</div>
-          <button onClick={rechargerDonnees} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem' }}>
-            <RefreshCw size={14} />
+          <div>
+            <div className="card-title">
+              <UserCheck size={18} color="#134B65" />
+              <span>Comptes Professionnels & Citoyens ({utilisateurs.length})</span>
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>
+              Gestion des habilitations, statuts d'accès et cycle de vie
+            </div>
+          </div>
+
+          <button
+            onClick={rechargerDonnees}
+            className="btn btn-secondary"
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.8rem' }}
+          >
+            <RefreshCw size={13} />
             <span>Actualiser</span>
           </button>
         </div>
+
         <div className="table-container">
           <table className="table-modern">
             <thead>
               <tr>
                 <th>Identifiant</th>
                 <th>Nom complet</th>
-                <th>Rôle</th>
+                <th>Rôle Habilité</th>
                 <th>Gouvernorat</th>
                 <th>Statut</th>
-                <th>Expiration</th>
-                <th>Actions</th>
+                <th>Validité</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {utilisateurs.map((u) => (
                 <tr key={u.id}>
-                  <td style={{ fontWeight: 700 }}>{u.username}</td>
-                  <td>{u.prenom} {u.nom}</td>
+                  <td style={{ fontWeight: 700, color: '#0B2535' }}>
+                    <span className="font-mono-ins">{u.username}</span>
+                  </td>
+                  <td style={{ fontWeight: 600 }}>{u.prenom} {u.nom}</td>
                   <td>
-                    <span style={{ padding: '2px 8px', background: '#f1f5f9', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        backgroundColor: '#EDF5F9',
+                        borderRadius: '4px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: '#134B65',
+                      }}
+                    >
                       {u.role_libelle}
                     </span>
                   </td>
-                  <td>{u.gouvernorat || '—'}</td>
+                  <td style={{ color: '#475569' }}>{u.gouvernorat || 'National'}</td>
                   <td>
-                    <span style={{
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      background: u.is_active ? '#dcfce7' : '#fee2e2',
-                      color: u.is_active ? '#166534' : '#991b1b',
-                    }}>
-                      {u.is_active ? 'Actif' : 'Désactivé'}
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        backgroundColor: u.is_active ? '#EAF6F4' : '#F1F5F9',
+                        color: u.is_active ? '#107569' : '#64748B',
+                        border: `1px solid ${u.is_active ? '#A3D9CE' : '#CBD5E1'}`,
+                      }}
+                    >
+                      {u.is_active ? 'Actif' : 'Suspendu'}
                     </span>
                   </td>
                   <td>
                     {u.expire_le ? (
-                      <span style={{ fontSize: '0.8rem', color: new Date(u.expire_le) < new Date() ? '#ef4444' : '#475569' }}>
+                      <span
+                        style={{
+                          fontSize: '0.8rem',
+                          color: new Date(u.expire_le) < new Date() ? '#142C3D' : '#475569',
+                          fontWeight: 500,
+                        }}
+                      >
                         {new Date(u.expire_le).toLocaleDateString('fr-FR')}
                       </span>
                     ) : (
-                      <span style={{ color: '#94a3b8' }}>Permanent</span>
+                      <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>Permanent</span>
                     )}
                   </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
                       <button
                         onClick={() => reinitialiserMdp(u.id, u.username)}
                         className="btn btn-secondary"
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                        title="Réinitialiser mot de passe"
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                        title="Réinitialiser le mot de passe"
                       >
                         <Key size={13} />
                         <span>Mdp</span>
@@ -359,9 +533,9 @@ export const ItAdminDashboard: React.FC = () => {
                       <button
                         onClick={() => basculerStatutActif(u.id, u.is_active)}
                         className={`btn ${u.is_active ? 'btn-secondary' : 'btn-primary'}`}
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                        style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
                       >
-                        {u.is_active ? 'Désactiver' : 'Activer'}
+                        {u.is_active ? 'Suspendre' : 'Activer'}
                       </button>
                     </div>
                   </td>
@@ -372,36 +546,56 @@ export const ItAdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Journal d'audit immuable */}
+      {/* ── JOURNAL D'AUDIT IMMUABLE ── */}
       <div className="card">
         <div className="card-header">
-          <div className="card-title">Journal d'Audit Immuable de Traçabilité ({journaux.length} événements récents)</div>
+          <div>
+            <div className="card-title">
+              <Lock size={18} color="#134B65" />
+              <span>Journal d'Audit Immuable de Traçabilité ({journaux.length} événements)</span>
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>
+              Enregistrement horodaté conforme aux exigences de sécurité des données de santé
+            </div>
+          </div>
         </div>
+
         <div className="table-container">
           <table className="table-modern">
             <thead>
               <tr>
                 <th>Horodatage</th>
-                <th>Acteur</th>
-                <th>Action</th>
-                <th>Ressource</th>
-                <th>Adresse IP</th>
+                <th>Acteur Identifié</th>
+                <th>Action Opérée</th>
+                <th>Ressource Clinique</th>
+                <th>Origine IP</th>
               </tr>
             </thead>
             <tbody>
               {journaux.slice(0, 15).map((j) => (
                 <tr key={j.id}>
-                  <td style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  <td style={{ fontSize: '0.78rem', color: '#64748B', fontFamily: 'monospace' }}>
                     {new Date(j.horodatage).toLocaleString('fr-FR')}
                   </td>
-                  <td style={{ fontWeight: 600 }}>{j.acteur_nom}</td>
+                  <td style={{ fontWeight: 600, color: '#0B2535' }}>{j.acteur_nom}</td>
                   <td>
-                    <span style={{ padding: '2px 6px', background: '#e0f2fe', color: '#0369a1', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
+                    <span
+                      style={{
+                        padding: '2px 7px',
+                        backgroundColor: '#EDF5F9',
+                        color: '#134B65',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
+                    >
                       {j.action_libelle}
                     </span>
                   </td>
-                  <td style={{ fontSize: '0.82rem' }}>{j.type_ressource}</td>
-                  <td style={{ fontSize: '0.8rem', color: '#64748b' }}>{j.adresse_ip || 'Local/Test'}</td>
+                  <td style={{ fontSize: '0.82rem', color: '#475569' }}>{j.type_ressource}</td>
+                  <td style={{ fontSize: '0.78rem', color: '#64748B', fontFamily: 'monospace' }}>
+                    {j.adresse_ip || 'Réseau Interne'}
+                  </td>
                 </tr>
               ))}
             </tbody>

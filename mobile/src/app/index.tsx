@@ -1,6 +1,7 @@
 /**
  * Écran Dossier Citoyen — Wiqayati Mobile
  * Profil de santé et historique des dépistages de risque diabète.
+ * v2 — Ajout StatutDernierBilan + CTA adaptatif + design tokens enrichis.
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -12,9 +13,11 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../api/authContext';
 import apiMobile from '../api/client';
 import { WiqayatiTokens } from '../constants/theme';
+import { StatutDernierBilan } from '../components/StatutDernierBilan';
 
 interface Evaluation {
   id: string;
@@ -44,6 +47,7 @@ const COULEUR_RISQUE: Record<string, { fond: string; texte: string; bordure: str
 
 export default function DossierCitoyenScreen() {
   const { profil, seDeconnecter } = useAuth();
+  const router = useRouter();
   const [historique, setHistorique] = useState<Evaluation[]>([]);
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] = useState(false);
@@ -92,12 +96,15 @@ export default function DossierCitoyenScreen() {
         />
       }
     >
-      {/* ── Fiche d'identité citoyenne ── */}
-      <View style={styles.cardIdentite}>
-        <View style={styles.badgeMinistere}>
-          <Text style={styles.badgeMinistereTexte}>Ministère de la Santé · République Tunisienne</Text>
-        </View>
+      {/* ── Statut dernier bilan (C4 — CTA adaptatif) ── */}
+      <StatutDernierBilan
+        evaluations={historique}
+        onNaviguerEvaluation={() => router.push('/autoeval')}
+        onNaviguerPlan={() => router.push('/plan')}
+      />
 
+      {/* ── Fiche d'identité citoyenne ── */}
+      <View style={[styles.cardIdentite, WiqayatiTokens.shadows.card]}>
         <View style={styles.avatarCercle}>
           <Text style={styles.avatarInitiales}>
             {profil?.prenom?.[0]}{profil?.nom?.[0]}
@@ -195,50 +202,35 @@ const styles = StyleSheet.create({
 
   cardIdentite: {
     backgroundColor: WiqayatiTokens.colors.surface,
-    borderRadius: WiqayatiTokens.radii.md,
+    borderRadius: WiqayatiTokens.radii.lg,
     borderWidth: 1,
     borderColor: WiqayatiTokens.colors.border,
     padding: 20,
     marginBottom: 20,
     alignItems: 'center',
   },
-  badgeMinistere: {
-    backgroundColor: WiqayatiTokens.colors.surfaceSubtle,
-    borderRadius: WiqayatiTokens.radii.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: WiqayatiTokens.colors.borderSubtle,
-  },
-  badgeMinistereTexte: {
-    fontSize: 11,
-    color: WiqayatiTokens.colors.primary,
-    fontWeight: '600',
-  },
   avatarCercle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: WiqayatiTokens.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+    ...WiqayatiTokens.shadows.elevated,
   },
   avatarInitiales: {
     color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
+    ...WiqayatiTokens.typography.h2,
   },
   nomCitoyen: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...WiqayatiTokens.typography.h2,
     color: WiqayatiTokens.colors.textPrimary,
     textAlign: 'center',
   },
   insCitoyen: {
-    fontSize: 13,
-    fontWeight: '600',
+    ...WiqayatiTokens.typography.caption,
+    fontWeight: '600' as const,
     color: WiqayatiTokens.colors.textSecondary,
     marginTop: 3,
   },
@@ -301,21 +293,21 @@ const styles = StyleSheet.create({
 
   cardHistorique: {
     backgroundColor: WiqayatiTokens.colors.surface,
-    borderRadius: WiqayatiTokens.radii.sm,
+    borderRadius: WiqayatiTokens.radii.md,
     padding: 14,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: WiqayatiTokens.colors.border,
+    ...WiqayatiTokens.shadows.card,
   },
   dateEval: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...WiqayatiTokens.typography.bodyMedium,
     color: WiqayatiTokens.colors.textPrimary,
   },
   scoreEval: {
-    fontSize: 12,
+    ...WiqayatiTokens.typography.caption,
     color: WiqayatiTokens.colors.textSecondary,
     marginTop: 2,
   },

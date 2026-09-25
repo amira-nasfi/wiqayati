@@ -1,6 +1,9 @@
 /**
- * Navigation par onglets — version Native — Wiqayati Citoyen
- * Barre de navigation native en bas de l'écran (Android/iOS).
+ * Navigation par onglets — Wiqayati Citoyen
+ * v2 : Onglet Suivi ajouté (remplace explore démo), ordre optimisé.
+ * Note (C1) : L'onglet Suivi est TOUJOURS visible — le contenu s'adapte
+ * selon que le plan est validé ou non (cacher dynamiquement un NativeTabs
+ * est fragile et non recommandé par expo-router).
  */
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
@@ -10,6 +13,7 @@ const ONGLETS = [
   { nom: 'index',         libelle: 'Dossier',    icone: require('@/assets/images/tabIcons/home.png') },
   { nom: 'plan',          libelle: 'Mon Plan',   icone: require('@/assets/images/tabIcons/explore.png') },
   { nom: 'autoeval',      libelle: 'Évaluation', icone: require('@/assets/images/tabIcons/explore.png') },
+  { nom: 'suivi',         libelle: 'Suivi',      icone: require('@/assets/images/tabIcons/home.png') },
   { nom: 'notifications', libelle: 'Alertes',    icone: require('@/assets/images/tabIcons/home.png') },
 ];
 

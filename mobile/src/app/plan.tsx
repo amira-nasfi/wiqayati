@@ -1,6 +1,7 @@
 /**
  * Écran Mon Plan — Wiqayati Mobile (Citoyen)
  * Plan de nutrition et d'activité physique validé par le praticien nutritionniste.
+ * v2 — Ajout encart suivi d'aujourd'hui + design tokens enrichis.
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -10,9 +11,13 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../api/authContext';
 import apiMobile from '../api/client';
 import { WiqayatiTokens } from '../constants/theme';
+import { useSuiviQuotidien } from '../hooks/useSuiviQuotidien';
 
 interface PlanActif {
   a_un_plan_valide: boolean;
@@ -33,6 +38,9 @@ interface PlanActif {
 }
 
 export default function PlanSoinCitoyenScreen() {
+  const { profil } = useAuth();
+  const router = useRouter();
+  const { suiviDuJour, chargerSuiviDuJour } = useSuiviQuotidien(profil?.ins ?? '');
   const [plan, setPlan] = useState<PlanActif | null>(null);
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] = useState(false);
@@ -51,7 +59,8 @@ export default function PlanSoinCitoyenScreen() {
 
   useEffect(() => {
     chargerPlan();
-  }, [chargerPlan]);
+    chargerSuiviDuJour();
+  }, [chargerPlan, chargerSuiviDuJour]);
 
   if (chargement) {
     return (
@@ -166,6 +175,35 @@ export default function PlanSoinCitoyenScreen() {
           <Text style={styles.texteNotes}>{plan.notes_nutritionniste}</Text>
         </View>
       )}
+
+      {/* ── T7 : Encart progression d'aujourd'hui ── */}
+      <View style={[styles.encartSuivi, WiqayatiTokens.shadows.card]}>
+        <View style={styles.encartSuiviEntete}>
+          <Text style={styles.encartSuiviTitre}>Votre progression aujourd'hui</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/suivi')}
+            activeOpacity={0.8}
+            style={styles.lienSuivi}
+          >
+            <Text style={styles.lienSuiviTexte}>Saisir →</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.encartSuiviLigne}>
+          <View style={styles.encartSuiviItem}>
+            <Text style={styles.encartSuiviIcone}>
+              {suiviDuJour?.activite?.faite ? '✓' : '○'}
+            </Text>
+            <Text style={styles.encartSuiviLabel}>Activité</Text>
+          </View>
+          <View style={styles.encartSuiviSeparateur} />
+          <View style={styles.encartSuiviItem}>
+            <Text style={styles.encartSuiviIcone}>
+              {suiviDuJour?.nutrition?.objectifs_coches?.length ?? 0}/{suiviDuJour?.nutrition?.total_objectifs ?? (plan.plan_nutrition?.objectifs?.length ?? '?')}
+            </Text>
+            <Text style={styles.encartSuiviLabel}>Objectifs nutrition</Text>
+          </View>
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -228,8 +266,9 @@ const styles = StyleSheet.create({
     borderColor: WiqayatiTokens.colors.risk.faible.border,
     paddingVertical: 9,
     paddingHorizontal: 12,
-    borderRadius: WiqayatiTokens.radii.sm,
+    borderRadius: WiqayatiTokens.radii.md,
     marginBottom: 16,
+    ...WiqayatiTokens.shadows.card,
   },
   pointValidation: {
     width: 7,
@@ -356,17 +395,74 @@ const styles = StyleSheet.create({
     borderRadius: WiqayatiTokens.radii.md,
     padding: 16,
     marginBottom: 14,
+    ...WiqayatiTokens.shadows.card,
   },
   titreNotes: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...WiqayatiTokens.typography.h3,
     color: WiqayatiTokens.colors.primary,
     marginBottom: 6,
   },
   texteNotes: {
-    fontSize: 13.5,
+    ...WiqayatiTokens.typography.body,
     color: WiqayatiTokens.colors.textPrimary,
     lineHeight: 20,
     fontStyle: 'italic',
   },
+
+  /* T7 — Encart suivi d'aujourd'hui */
+  encartSuivi: {
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderRadius: WiqayatiTokens.radii.lg,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
+    padding: 16,
+    marginBottom: 14,
+  },
+  encartSuiviEntete: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  encartSuiviTitre: {
+    ...WiqayatiTokens.typography.h3,
+    color: WiqayatiTokens.colors.textPrimary,
+  },
+  lienSuivi: {
+    backgroundColor: WiqayatiTokens.colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: WiqayatiTokens.radii.sm,
+  },
+  lienSuiviTexte: {
+    ...WiqayatiTokens.typography.caption,
+    color: WiqayatiTokens.colors.primary,
+    fontWeight: '700' as const,
+  },
+  encartSuiviLigne: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  encartSuiviItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  encartSuiviIcone: {
+    fontSize: 22,
+    fontWeight: '700' as const,
+    color: WiqayatiTokens.colors.accent,
+  },
+  encartSuiviLabel: {
+    ...WiqayatiTokens.typography.caption,
+    color: WiqayatiTokens.colors.textMuted,
+    textAlign: 'center',
+  },
+  encartSuiviSeparateur: {
+    width: 1,
+    height: 36,
+    backgroundColor: WiqayatiTokens.colors.borderSubtle,
+    marginHorizontal: 8,
+  },
 });
+

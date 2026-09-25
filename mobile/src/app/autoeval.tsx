@@ -1,6 +1,6 @@
 /**
  * Écran Auto-évaluation — Wiqayati Mobile
- * Permet au citoyen de soumettre une auto-évaluation de ses facteurs de risque.
+ * Outil de dépistage clinique des facteurs de risque du diabète de type 2 (FINDRISC).
  */
 import React, { useState } from 'react';
 import {
@@ -13,29 +13,30 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import apiMobile from '../api/client';
+import { WiqayatiTokens } from '../constants/theme';
 
 type NiveauActivite = 'SEDENTAIRE' | 'FAIBLE' | 'MODERE' | 'ACTIF';
 type QualiteAlimentation = 'MAUVAISE' | 'MOYENNE' | 'BONNE';
 type StatutTabac = 'JAMAIS' | 'ANCIEN' | 'ACTIF';
 type Genre = 'M' | 'F';
 
-const NIVEAUX_ACTIVITE: { valeur: NiveauActivite; libelle: string }[] = [
-  { valeur: 'SEDENTAIRE', libelle: 'Sédentaire' },
-  { valeur: 'FAIBLE',     libelle: 'Faible' },
-  { valeur: 'MODERE',     libelle: 'Modéré' },
-  { valeur: 'ACTIF',      libelle: 'Actif' },
+const NIVEAUX_ACTIVITE: { valeur: NiveauActivite; libelle: string; icon: string }[] = [
+  { valeur: 'SEDENTAIRE', libelle: 'Sédentaire', icon: '🪑' },
+  { valeur: 'FAIBLE',     libelle: 'Faible',     icon: '🚶' },
+  { valeur: 'MODERE',     libelle: 'Modéré',     icon: '🏃' },
+  { valeur: 'ACTIF',      libelle: 'Actif',      icon: '⚡' },
 ];
 
-const QUALITE_ALIM: { valeur: QualiteAlimentation; libelle: string }[] = [
-  { valeur: 'MAUVAISE', libelle: 'Mauvaise' },
-  { valeur: 'MOYENNE',  libelle: 'Moyenne' },
-  { valeur: 'BONNE',    libelle: 'Bonne' },
+const QUALITE_ALIM: { valeur: QualiteAlimentation; libelle: string; icon: string }[] = [
+  { valeur: 'MAUVAISE', libelle: 'À améliorer', icon: '🍟' },
+  { valeur: 'MOYENNE',  libelle: 'Équilibrée',  icon: '🥗' },
+  { valeur: 'BONNE',    libelle: 'Optimale',    icon: '🥑' },
 ];
 
-const TABAC: { valeur: StatutTabac; libelle: string }[] = [
-  { valeur: 'JAMAIS', libelle: 'Jamais' },
-  { valeur: 'ANCIEN', libelle: 'Ex-fumeur' },
-  { valeur: 'ACTIF',  libelle: 'Fumeur actif' },
+const TABAC: { valeur: StatutTabac; libelle: string; icon: string }[] = [
+  { valeur: 'JAMAIS', libelle: 'Jamais',       icon: '🌿' },
+  { valeur: 'ANCIEN', libelle: 'Ex-fumeur',    icon: '⏳' },
+  { valeur: 'ACTIF',  libelle: 'Fumeur actif', icon: '🚬' },
 ];
 
 function SectionChoix<T extends string>({
@@ -45,56 +46,55 @@ function SectionChoix<T extends string>({
   onChange,
 }: {
   label: string;
-  options: { valeur: T; libelle: string }[];
+  options: { valeur: T; libelle: string; icon?: string }[];
   valeurActuelle: T;
   onChange: (v: T) => void;
 }) {
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={{ marginBottom: 18 }}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.choixRow}>
-        {options.map((opt) => (
-          <TouchableOpacity
-            key={opt.valeur}
-            style={[
-              styles.choixBtn,
-              valeurActuelle === opt.valeur && styles.choixBtnActif,
-            ]}
-            onPress={() => onChange(opt.valeur)}
-          >
-            <Text
+        {options.map((opt) => {
+          const estActif = valeurActuelle === opt.valeur;
+          return (
+            <TouchableOpacity
+              key={opt.valeur}
               style={[
-                styles.choixBtnTexte,
-                valeurActuelle === opt.valeur && styles.choixBtnTexteActif,
+                styles.choixBtn,
+                estActif && styles.choixBtnActif,
               ]}
+              onPress={() => onChange(opt.valeur)}
+              activeOpacity={0.7}
             >
-              {opt.libelle}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              {opt.icon && <Text style={styles.choixIcon}>{opt.icon}</Text>}
+              <Text
+                style={[
+                  styles.choixBtnTexte,
+                  estActif && styles.choixBtnTexteActif,
+                ]}
+              >
+                {opt.libelle}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
 }
 
-const COULEUR_NIVEAU: Record<string, { fond: string; texte: string; bordure: string }> = {
-  ELEVE:         { fond: '#fee2e2', texte: '#991b1b', bordure: '#fca5a5' },
-  INTERMEDIAIRE: { fond: '#fef3c7', texte: '#92400e', bordure: '#fde68a' },
-  FAIBLE:        { fond: '#dcfce7', texte: '#166534', bordure: '#86efac' },
-};
-
 export default function AutoEvaluationScreen() {
   // Données du formulaire
-  const [genre, setGenre]       = useState<Genre>('M');
-  const [age, setAge]           = useState('');
-  const [imc, setImc]           = useState('');
-  const [tourTaille, setTourTaille] = useState('');
-  const [famille, setFamille]   = useState(false);
+  const [genre, setGenre]             = useState<Genre>('M');
+  const [age, setAge]                 = useState('');
+  const [imc, setImc]                 = useState('');
+  const [tourTaille, setTourTaille]   = useState('');
+  const [famille, setFamille]         = useState(false);
   const [hypertension, setHypertension] = useState(false);
-  const [diabeteGest, setDiabeteGest]   = useState(false);
-  const [activite, setActivite] = useState<NiveauActivite>('MODERE');
+  const [diabeteGest, setDiabeteGest] = useState(false);
+  const [activite, setActivite]       = useState<NiveauActivite>('MODERE');
   const [alimentation, setAlimentation] = useState<QualiteAlimentation>('MOYENNE');
-  const [tabac, setTabac]       = useState<StatutTabac>('JAMAIS');
+  const [tabac, setTabac]             = useState<StatutTabac>('JAMAIS');
 
   // État UI
   const [chargement, setChargement] = useState(false);
@@ -140,7 +140,7 @@ export default function AutoEvaluationScreen() {
       setErreur(
         err.response?.data?.erreur ||
         err.response?.data?.detail ||
-        "Une erreur est survenue. Veuillez réessayer."
+        "Une erreur est survenue. Veuillez vérifier votre connexion."
       );
     } finally {
       setChargement(false);
@@ -155,138 +155,272 @@ export default function AutoEvaluationScreen() {
   // Affichage du résultat
   if (resultat) {
     const eval_ = resultat.evaluation;
-    const couleurs = COULEUR_NIVEAU[eval_?.niveau_risque] ?? COULEUR_NIVEAU.FAIBLE;
+    const niveau = eval_?.niveau_risque || 'FAIBLE';
+    const riskToken = niveau === 'ELEVE'
+      ? WiqayatiTokens.colors.risk.eleve
+      : niveau === 'INTERMEDIAIRE'
+      ? WiqayatiTokens.colors.risk.intermediaire
+      : WiqayatiTokens.colors.risk.faible;
+
+    const emojiIcon = niveau === 'ELEVE' ? '⚠️' : niveau === 'INTERMEDIAIRE' ? '⚡' : '🛡️';
+
     return (
-      <ScrollView style={styles.container}>
-        <View style={[styles.resultatCard, { backgroundColor: couleurs.fond, borderColor: couleurs.bordure }]}>
-          <Text style={styles.resultatEmoji}>
-            {eval_?.niveau_risque === 'ELEVE' ? '🔴' : eval_?.niveau_risque === 'INTERMEDIAIRE' ? '🟡' : '🟢'}
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Carte de score principale */}
+        <View style={[styles.resultatCard, { backgroundColor: riskToken.surface, borderColor: riskToken.border }]}>
+          <View style={[styles.resultatIconWrapper, { backgroundColor: riskToken.border }]}>
+            <Text style={styles.resultatEmoji}>{emojiIcon}</Text>
+          </View>
+          
+          <Text style={[styles.resultatTitreBadge, { color: riskToken.text }]}>
+            NIVEAU ESTIMÉ
           </Text>
-          <Text style={[styles.resultatNiveau, { color: couleurs.texte }]}>
-            Niveau de risque : {eval_?.niveau_risque_libelle ?? eval_?.niveau_risque}
+
+          <Text style={[styles.resultatNiveau, { color: riskToken.text }]}>
+            {eval_?.niveau_risque_libelle ?? eval_?.niveau_risque}
           </Text>
-          <Text style={[styles.resultatScore, { color: couleurs.texte }]}>
-            Score : {eval_?.score} / 100
-          </Text>
-          <Text style={[styles.resultatMsg, { color: couleurs.texte }]}>
+
+          <View style={styles.scoreContainer}>
+            <Text style={[styles.resultatScore, { color: riskToken.base }]}>
+              {eval_?.score ?? 0}
+            </Text>
+            <Text style={[styles.resultatScoreMax, { color: riskToken.text }]}>/ 100</Text>
+          </View>
+
+          <Text style={[styles.resultatMsg, { color: riskToken.text }]}>
             {resultat.message}
           </Text>
         </View>
 
-        {/* Facteurs contributeurs */}
+        {/* Facteurs identifiés */}
         {eval_?.facteurs_principaux?.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitre}>Facteurs de risque identifiés</Text>
-            {eval_.facteurs_principaux.map((f: string, i: number) => (
-              <View key={i} style={styles.facteurRow}>
-                <Text style={styles.facteurBullet}>⚠</Text>
-                <Text style={styles.facteurTexte}>{f}</Text>
-              </View>
-            ))}
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>🔍</Text>
+              <Text style={styles.cardTitre}>Facteurs contributifs</Text>
+            </View>
+            <View style={styles.facteursList}>
+              {eval_.facteurs_principaux.map((f: string, i: number) => (
+                <View key={i} style={styles.facteurRow}>
+                  <View style={styles.bulletDot} />
+                  <Text style={styles.facteurTexte}>{f}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
-        <TouchableOpacity style={styles.btnSecondaire} onPress={reinitialiser}>
-          <Text style={styles.btnSecondaireTexte}>Effectuer une nouvelle évaluation</Text>
+        {/* Note médicale */}
+        <View style={styles.infoNoteCard}>
+          <Text style={styles.infoNoteText}>
+            💡 Ce dépistage est indicatif. Parlez-en à votre professionnel de santé ou consultez votre plan de prévention personnalisé.
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.btnSecondaire}
+          onPress={reinitialiser}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.btnSecondaireTexte}>Nouvelle auto-évaluation</Text>
         </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     );
   }
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.titrePage}>Auto-évaluation du Risque</Text>
-      <Text style={styles.sousTitrePage}>
-        Renseignez vos informations pour obtenir une estimation immédiate de votre niveau de risque de diabète de type 2.
-      </Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* En-tête clinique */}
+      <View style={styles.header}>
+        <View style={styles.badgePill}>
+          <Text style={styles.badgePillText}>🔬 Outil FINDRISC Adapté</Text>
+        </View>
+        <Text style={styles.titrePage}>Auto-évaluation</Text>
+        <Text style={styles.sousTitrePage}>
+          Évaluez en 2 minutes vos facteurs métaboliques et prédispositions au diabète de type 2.
+        </Text>
+      </View>
+
+      {/* Guide visuel des 3 étapes */}
+      <View style={styles.etapesRow}>
+        <View style={[styles.etapeBadge, styles.etapeBadgeActif]}>
+          <Text style={styles.etapeNumero}>1</Text>
+          <Text style={styles.etapeLibelle}>Général</Text>
+        </View>
+        <View style={styles.etapeLigne} />
+        <View style={[styles.etapeBadge, styles.etapeBadgeActif]}>
+          <Text style={styles.etapeNumero}>2</Text>
+          <Text style={styles.etapeLibelle}>Médical</Text>
+        </View>
+        <View style={styles.etapeLigne} />
+        <View style={[styles.etapeBadge, styles.etapeBadgeActif]}>
+          <Text style={styles.etapeNumero}>3</Text>
+          <Text style={styles.etapeLibelle}>Habitudes</Text>
+        </View>
+      </View>
 
       {erreur && (
         <View style={styles.alerteErreur}>
-          <Text style={styles.alerteErreurTexte}>⚠ {erreur}</Text>
+          <Text style={styles.alerteErreurTexte}>⚠️ {erreur}</Text>
         </View>
       )}
 
-      {/* ── Informations personnelles ── */}
+      {/* ── Section 1 : Informations personnelles ── */}
       <View style={styles.card}>
-        <Text style={styles.cardTitre}>Informations générales</Text>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.cardHeaderIcon}>👤</Text>
+          <Text style={styles.cardTitre}>1. Paramètres corporels</Text>
+        </View>
 
         <SectionChoix
-          label="Genre"
-          options={[{ valeur: 'M', libelle: 'Masculin' }, { valeur: 'F', libelle: 'Féminin' }]}
+          label="Genre biologique"
+          options={[
+            { valeur: 'M', libelle: 'Homme', icon: '♂️' },
+            { valeur: 'F', libelle: 'Femme', icon: '♀️' },
+          ]}
           valeurActuelle={genre}
           onChange={setGenre}
         />
 
-        <Text style={styles.label}>Âge (années)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex : 45"
-          placeholderTextColor="#94a3b8"
-          keyboardType="numeric"
-          value={age}
-          onChangeText={setAge}
-          returnKeyType="next"
-        />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Âge (années)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex : 45"
+            placeholderTextColor={WiqayatiTokens.colors.textMuted}
+            keyboardType="numeric"
+            value={age}
+            onChangeText={setAge}
+            returnKeyType="next"
+          />
+        </View>
 
-        <Text style={styles.label}>Indice de Masse Corporelle — IMC (kg/m²)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex : 26.5"
-          placeholderTextColor="#94a3b8"
-          keyboardType="decimal-pad"
-          value={imc}
-          onChangeText={setImc}
-          returnKeyType="next"
-        />
+        <View style={styles.inputGroup}>
+          <View style={styles.labelWithHint}>
+            <Text style={styles.label}>Indice de Masse Corporelle (IMC)</Text>
+            <Text style={styles.labelHint}>Poids/(Taille)²</Text>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex : 26.5"
+            placeholderTextColor={WiqayatiTokens.colors.textMuted}
+            keyboardType="decimal-pad"
+            value={imc}
+            onChangeText={setImc}
+            returnKeyType="next"
+          />
+        </View>
 
-        <Text style={styles.label}>Tour de taille (cm) — optionnel</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ex : 92"
-          placeholderTextColor="#94a3b8"
-          keyboardType="numeric"
-          value={tourTaille}
-          onChangeText={setTourTaille}
-        />
+        <View style={styles.inputGroup}>
+          <View style={styles.labelWithHint}>
+            <Text style={styles.label}>Tour de taille (cm)</Text>
+            <Text style={styles.labelHint}>Optionnel</Text>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex : 88"
+            placeholderTextColor={WiqayatiTokens.colors.textMuted}
+            keyboardType="numeric"
+            value={tourTaille}
+            onChangeText={setTourTaille}
+          />
+        </View>
       </View>
 
-      {/* ── Antécédents ── */}
+      {/* ── Section 2 : Antécédents ── */}
       <View style={styles.card}>
-        <Text style={styles.cardTitre}>Antécédents médicaux</Text>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.cardHeaderIcon}>🩺</Text>
+          <Text style={styles.cardTitre}>2. Antécédents médicaux</Text>
+        </View>
 
         {([
-          { label: 'Antécédents familiaux de diabète (1er degré)', etat: famille, toggle: setFamille },
-          { label: 'Hypertension artérielle diagnostiquée', etat: hypertension, toggle: setHypertension },
-          { label: 'Diabète gestationnel (pour les femmes)', etat: diabeteGest, toggle: setDiabeteGest },
-        ] as const).map(({ label, etat, toggle }: any) => (
+          {
+            label: 'Antécédents familiaux de diabète',
+            sousLabel: 'Parents, fratrie ou enfants de 1er degré',
+            etat: famille,
+            toggle: setFamille,
+          },
+          {
+            label: 'Hypertension artérielle traitée ou connue',
+            sousLabel: 'Pression artérielle ≥ 140/90 mmHg',
+            etat: hypertension,
+            toggle: setHypertension,
+          },
+          ...(genre === 'F'
+            ? [
+                {
+                  label: 'Antécédent de diabète gestationnel',
+                  sousLabel: 'Découvert pendant une grossesse',
+                  etat: diabeteGest,
+                  toggle: setDiabeteGest,
+                },
+              ]
+            : []),
+        ]).map(({ label, sousLabel, etat, toggle }: any) => (
           <TouchableOpacity
             key={label}
             style={[styles.checkBtn, etat && styles.checkBtnActif]}
             onPress={() => toggle(!etat)}
+            activeOpacity={0.7}
           >
             <View style={[styles.checkbox, etat && styles.checkboxActif]}>
-              {etat && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>✓</Text>}
+              {etat && <Text style={styles.checkCheckmark}>✓</Text>}
             </View>
-            <Text style={[styles.checkTexte, etat && styles.checkTexteActif]}>{label}</Text>
+            <View style={styles.checkTextGroup}>
+              <Text style={[styles.checkTexte, etat && styles.checkTexteActif]}>
+                {label}
+              </Text>
+              {sousLabel && (
+                <Text style={styles.checkSousTexte}>{sousLabel}</Text>
+              )}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* ── Habitudes de vie ── */}
+      {/* ── Section 3 : Habitudes de vie ── */}
       <View style={styles.card}>
-        <Text style={styles.cardTitre}>Habitudes de vie</Text>
-        <SectionChoix label="Niveau d'activité physique" options={NIVEAUX_ACTIVITE} valeurActuelle={activite} onChange={setActivite} />
-        <SectionChoix label="Qualité de l'alimentation" options={QUALITE_ALIM} valeurActuelle={alimentation} onChange={setAlimentation} />
-        <SectionChoix label="Statut tabagique" options={TABAC} valeurActuelle={tabac} onChange={setTabac} />
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.cardHeaderIcon}>🌱</Text>
+          <Text style={styles.cardTitre}>3. Habitudes de vie</Text>
+        </View>
+
+        <SectionChoix
+          label="Niveau d'activité physique habituel"
+          options={NIVEAUX_ACTIVITE}
+          valeurActuelle={activite}
+          onChange={setActivite}
+        />
+        <SectionChoix
+          label="Qualité de l'alimentation au quotidien"
+          options={QUALITE_ALIM}
+          valeurActuelle={alimentation}
+          onChange={setAlimentation}
+        />
+        <SectionChoix
+          label="Statut tabagique"
+          options={TABAC}
+          valeurActuelle={tabac}
+          onChange={setTabac}
+        />
       </View>
 
+      {/* Bouton de calcul */}
       <TouchableOpacity
-        style={[styles.btnPrincipal, chargement && { opacity: 0.7 }]}
+        style={[styles.btnPrincipal, chargement && { opacity: 0.75 }]}
         onPress={soumettre}
         disabled={chargement}
+        activeOpacity={0.85}
       >
         {chargement ? (
-          <ActivityIndicator color="#fff" size="small" />
+          <ActivityIndicator color={WiqayatiTokens.colors.textInverse} size="small" />
         ) : (
           <Text style={styles.btnPrincipalTexte}>Calculer mon niveau de risque →</Text>
         )}
@@ -298,79 +432,356 @@ export default function AutoEvaluationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f6ff', padding: 16 },
-  titrePage: { fontSize: 22, fontWeight: '900', color: '#0f2c59', marginBottom: 4 },
-  sousTitrePage: { fontSize: 13, color: '#64748b', lineHeight: 19, marginBottom: 18 },
+  container: {
+    flex: 1,
+    backgroundColor: WiqayatiTokens.colors.canvas,
+  },
+  contentContainer: {
+    padding: 16,
+  },
+  header: {
+    marginBottom: 16,
+  },
+  badgePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: WiqayatiTokens.colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: WiqayatiTokens.radii.full,
+    marginBottom: 8,
+  },
+  badgePillText: {
+    color: WiqayatiTokens.colors.primary,
+    ...WiqayatiTokens.typography.label,
+  },
+  titrePage: {
+    color: WiqayatiTokens.colors.textPrimary,
+    ...WiqayatiTokens.typography.h1,
+    marginBottom: 4,
+  },
+  sousTitrePage: {
+    color: WiqayatiTokens.colors.textSecondary,
+    ...WiqayatiTokens.typography.body,
+    lineHeight: 20,
+  },
 
-  alerteErreur: { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', borderRadius: 10, padding: 12, marginBottom: 14 },
-  alerteErreurTexte: { color: '#b91c1c', fontSize: 13, fontWeight: '600' },
+  // Étapes
+  etapesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: WiqayatiTokens.colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: WiqayatiTokens.radii.lg,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
+    marginBottom: 16,
+    ...WiqayatiTokens.shadows.card,
+  },
+  etapeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  etapeBadgeActif: {
+    opacity: 1,
+  },
+  etapeNumero: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: WiqayatiTokens.colors.primaryLight,
+    color: WiqayatiTokens.colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  etapeLibelle: {
+    color: WiqayatiTokens.colors.textSecondary,
+    ...WiqayatiTokens.typography.caption,
+    fontWeight: '600',
+  },
+  etapeLigne: {
+    flex: 1,
+    height: 1,
+    backgroundColor: WiqayatiTokens.colors.borderSubtle,
+    marginHorizontal: 8,
+  },
+
+  alerteErreur: {
+    backgroundColor: WiqayatiTokens.colors.risk.eleve.surface,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.risk.eleve.border,
+    borderRadius: WiqayatiTokens.radii.md,
+    padding: 12,
+    marginBottom: 16,
+  },
+  alerteErreurTexte: {
+    color: WiqayatiTokens.colors.risk.eleve.text,
+    ...WiqayatiTokens.typography.caption,
+    fontWeight: '600',
+  },
 
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderRadius: WiqayatiTokens.radii.xl,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: WiqayatiTokens.colors.border,
+    ...WiqayatiTokens.shadows.card,
   },
-  cardTitre: { fontSize: 16, fontWeight: '800', color: '#0f2c59', marginBottom: 14 },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: WiqayatiTokens.colors.surfaceSubtle,
+    paddingBottom: 10,
+  },
+  cardHeaderIcon: {
+    fontSize: 18,
+  },
+  cardTitre: {
+    color: WiqayatiTokens.colors.textPrimary,
+    ...WiqayatiTokens.typography.h3,
+  },
 
-  label: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 },
+  inputGroup: {
+    marginBottom: 14,
+  },
+  label: {
+    color: WiqayatiTokens.colors.textPrimary,
+    ...WiqayatiTokens.typography.caption,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  labelWithHint: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  labelHint: {
+    color: WiqayatiTokens.colors.textMuted,
+    ...WiqayatiTokens.typography.micro,
+  },
   input: {
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderColor: WiqayatiTokens.colors.border,
+    borderRadius: WiqayatiTokens.radii.md,
+    paddingHorizontal: 14,
     paddingVertical: 11,
-    fontSize: 15,
-    marginBottom: 14,
-    backgroundColor: '#f8fafc',
-    color: '#0f172a',
+    fontSize: 14,
+    backgroundColor: WiqayatiTokens.colors.surfaceSubtle,
+    color: WiqayatiTokens.colors.textPrimary,
   },
 
-  choixRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  choixBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' },
-  choixBtnActif: { backgroundColor: '#dbeafe', borderColor: '#3b82f6' },
-  choixBtnTexte: { fontSize: 13, color: '#475569', fontWeight: '600' },
-  choixBtnTexteActif: { color: '#1e40af', fontWeight: '800' },
-
-  checkBtn: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, backgroundColor: '#f8fafc', marginBottom: 8, borderWidth: 1, borderColor: '#e2e8f0' },
-  checkBtnActif: { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' },
-  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: '#cbd5e1', marginRight: 10, justifyContent: 'center', alignItems: 'center' },
-  checkboxActif: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  checkTexte: { fontSize: 13, color: '#475569', flex: 1, lineHeight: 18 },
-  checkTexteActif: { color: '#1e40af', fontWeight: '600' },
-
-  btnPrincipal: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 16,
-    borderRadius: 14,
+  // Choix boutons
+  choixRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  choixBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: WiqayatiTokens.radii.md,
+    backgroundColor: WiqayatiTokens.colors.surfaceSubtle,
+    borderWidth: 1.5,
+    borderColor: WiqayatiTokens.colors.border,
+    gap: 6,
   },
-  btnPrincipalTexte: { color: '#fff', fontWeight: '800', fontSize: 15, letterSpacing: 0.3 },
+  choixBtnActif: {
+    backgroundColor: WiqayatiTokens.colors.primaryLight,
+    borderColor: WiqayatiTokens.colors.primary,
+  },
+  choixIcon: {
+    fontSize: 14,
+  },
+  choixBtnTexte: {
+    color: WiqayatiTokens.colors.textSecondary,
+    ...WiqayatiTokens.typography.caption,
+    fontWeight: '600',
+  },
+  choixBtnTexteActif: {
+    color: WiqayatiTokens.colors.primary,
+    fontWeight: '800',
+  },
+
+  // Check buttons
+  checkBtn: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: WiqayatiTokens.radii.md,
+    backgroundColor: WiqayatiTokens.colors.surfaceSubtle,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: WiqayatiTokens.colors.border,
+  },
+  checkBtnActif: {
+    backgroundColor: WiqayatiTokens.colors.accentLight,
+    borderColor: WiqayatiTokens.colors.accent,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: WiqayatiTokens.colors.border,
+    marginRight: 10,
+    marginTop: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: WiqayatiTokens.colors.surface,
+  },
+  checkboxActif: {
+    backgroundColor: WiqayatiTokens.colors.accent,
+    borderColor: WiqayatiTokens.colors.accent,
+  },
+  checkCheckmark: {
+    color: WiqayatiTokens.colors.textInverse,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  checkTextGroup: {
+    flex: 1,
+  },
+  checkTexte: {
+    color: WiqayatiTokens.colors.textPrimary,
+    ...WiqayatiTokens.typography.caption,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  checkTexteActif: {
+    color: WiqayatiTokens.colors.accent,
+    fontWeight: '700',
+  },
+  checkSousTexte: {
+    color: WiqayatiTokens.colors.textMuted,
+    ...WiqayatiTokens.typography.micro,
+    marginTop: 2,
+  },
+
+  // Bouton principal
+  btnPrincipal: {
+    backgroundColor: WiqayatiTokens.colors.primary,
+    paddingVertical: 15,
+    borderRadius: WiqayatiTokens.radii.lg,
+    alignItems: 'center',
+    marginTop: 6,
+    ...WiqayatiTokens.shadows.elevated,
+  },
+  btnPrincipalTexte: {
+    color: WiqayatiTokens.colors.textInverse,
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
 
   // ── Résultat ──
-  resultatCard: { borderRadius: 20, padding: 24, marginBottom: 20, alignItems: 'center', borderWidth: 2 },
-  resultatEmoji: { fontSize: 48, marginBottom: 12 },
-  resultatNiveau: { fontSize: 20, fontWeight: '900', textAlign: 'center', marginBottom: 6 },
-  resultatScore: { fontSize: 28, fontWeight: '900', textAlign: 'center', marginBottom: 10 },
-  resultatMsg: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  resultatCard: {
+    borderRadius: WiqayatiTokens.radii.xl,
+    padding: 24,
+    marginBottom: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    ...WiqayatiTokens.shadows.elevated,
+  },
+  resultatIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  resultatEmoji: {
+    fontSize: 28,
+  },
+  resultatTitreBadge: {
+    ...WiqayatiTokens.typography.micro,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  resultatNiveau: {
+    ...WiqayatiTokens.typography.h1,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  scoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  resultatScore: {
+    fontSize: 34,
+    fontWeight: '900',
+  },
+  resultatScoreMax: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  resultatMsg: {
+    ...WiqayatiTokens.typography.body,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
 
-  facteurRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  facteurBullet: { color: '#f59e0b', marginRight: 8, fontSize: 14 },
-  facteurTexte: { fontSize: 13, color: '#475569', flex: 1, lineHeight: 18 },
+  facteursList: {
+    gap: 8,
+  },
+  facteurRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  bulletDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: WiqayatiTokens.colors.accent,
+  },
+  facteurTexte: {
+    ...WiqayatiTokens.typography.body,
+    color: WiqayatiTokens.colors.textPrimary,
+    flex: 1,
+  },
 
-  btnSecondaire: { marginTop: 8, marginBottom: 32, padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: '#2563eb', alignItems: 'center' },
-  btnSecondaireTexte: { color: '#2563eb', fontWeight: '700', fontSize: 14 },
+  infoNoteCard: {
+    backgroundColor: WiqayatiTokens.colors.surfaceHighlight,
+    borderRadius: WiqayatiTokens.radii.md,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: WiqayatiTokens.colors.border,
+  },
+  infoNoteText: {
+    color: WiqayatiTokens.colors.textSecondary,
+    ...WiqayatiTokens.typography.caption,
+    lineHeight: 18,
+  },
+
+  btnSecondaire: {
+    padding: 14,
+    borderRadius: WiqayatiTokens.radii.lg,
+    borderWidth: 1.5,
+    borderColor: WiqayatiTokens.colors.primary,
+    backgroundColor: WiqayatiTokens.colors.surface,
+    alignItems: 'center',
+  },
+  btnSecondaireTexte: {
+    color: WiqayatiTokens.colors.primary,
+    ...WiqayatiTokens.typography.bodyMedium,
+    fontWeight: '700',
+  },
 });
+

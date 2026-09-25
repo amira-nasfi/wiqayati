@@ -1,6 +1,7 @@
 /**
  * Wiqayati Mobile Design System & Tokens
  * Système de design médical et bienveillant synchronisé avec le Web.
+ * v2 — Ajouts : shadows, typography tokens pour cohérence cross-écrans.
  */
 
 import '@/global.css';
@@ -10,7 +11,7 @@ export const WiqayatiTokens = {
   colors: {
     // Fond de page : blanc minéral doux teinté d'eau de menthe
     canvas: '#F4F8F7',
-    
+
     // Surfaces cliniques nettes
     surface: '#FFFFFF',
     surfaceSubtle: '#ECF3F1',
@@ -65,7 +66,59 @@ export const WiqayatiTokens = {
     sm: 6,
     md: 10,
     lg: 14,
+    xl: 20,
     full: 9999,
+  },
+
+  /**
+   * Ombres portées cross-platform (iOS shadowXxx + Android elevation).
+   * Usage : <View style={[styles.card, WiqayatiTokens.shadows.card]} />
+   */
+  shadows: {
+    none: {
+      shadowColor: 'transparent' as string,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0 as number,
+      shadowRadius: 0,
+      elevation: 0,
+    },
+    card: {
+      shadowColor: '#14282F',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06 as number,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    elevated: {
+      shadowColor: '#14282F',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.10 as number,
+      shadowRadius: 16,
+      elevation: 6,
+    },
+    strong: {
+      shadowColor: '#14282F',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.14 as number,
+      shadowRadius: 24,
+      elevation: 10,
+    },
+  },
+
+  /**
+   * Typographie — à étaler via spread :
+   *   style={{ color: WiqayatiTokens.colors.textPrimary, ...WiqayatiTokens.typography.h1 }}
+   * Garantit la cohérence h1/h2/body/caption/label sur tous les écrans.
+   */
+  typography: {
+    h1: { fontSize: 22, fontWeight: '800' as const, letterSpacing: -0.5, lineHeight: 28 },
+    h2: { fontSize: 18, fontWeight: '700' as const, letterSpacing: -0.3, lineHeight: 24 },
+    h3: { fontSize: 15, fontWeight: '700' as const, lineHeight: 21 },
+    body: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
+    bodyMedium: { fontSize: 14, fontWeight: '600' as const, lineHeight: 20 },
+    caption: { fontSize: 12, fontWeight: '500' as const, lineHeight: 17 },
+    label: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 0.5, lineHeight: 15 },
+    micro: { fontSize: 10, fontWeight: '600' as const, letterSpacing: 0.3, lineHeight: 14 },
   },
 } as const;
 
