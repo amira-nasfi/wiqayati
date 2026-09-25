@@ -40,7 +40,7 @@ export default function AppTabs() {
 
 function BoutonOnglet({ children, isFocused, emoji, ...props }: TabTriggerSlotProps & { emoji?: string }) {
   return (
-    <Pressable {...props} style={({ pressed }) => [styles.pressable, pressed && { opacity: 0.7 }]}>
+    <Pressable {...(props as any)} style={({ pressed }) => [styles.pressable, pressed && { opacity: 0.7 }]}>
       <View style={[styles.ongletView, isFocused && styles.ongletActif]}>
         <Text style={styles.emoji}>{emoji}</Text>
         <Text style={[styles.ongletTexte, isFocused && styles.ongletTexteActif]}>
