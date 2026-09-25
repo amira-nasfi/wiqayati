@@ -49,6 +49,26 @@ DEFINITION_QUESTIONNAIRE_V1 = {
             "unite": "cm"
         },
         {
+            "nom": "taille_cm",
+            "type": "decimal",
+            "libelle": "Taille",
+            "description": "Taille debout, sans chaussures",
+            "obligatoire": False,
+            "min": 100.0,
+            "max": 250.0,
+            "unite": "cm"
+        },
+        {
+            "nom": "tour_hanches_cm",
+            "type": "decimal",
+            "libelle": "Tour de hanches",
+            "description": "Mesuré au niveau le plus large des fesses",
+            "obligatoire": False,
+            "min": 50.0,
+            "max": 200.0,
+            "unite": "cm"
+        },
+        {
             "nom": "antecedents_familiaux_diabete",
             "type": "booleen",
             "libelle": "Antécédents familiaux de diabète",

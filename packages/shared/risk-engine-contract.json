@@ -67,6 +67,18 @@
             "maximum": 200.0,
             "description": "Tour de taille en centimètres"
           },
+          "taille_cm": {
+            "type": "number",
+            "minimum": 100.0,
+            "maximum": 250.0,
+            "description": "Taille en centimètres (optionnel ; requis par le modèle ia-2.0)"
+          },
+          "tour_hanches_cm": {
+            "type": "number",
+            "minimum": 50.0,
+            "maximum": 200.0,
+            "description": "Tour de hanches en centimètres (optionnel ; requis par le modèle ia-2.0)"
+          },
           "antecedents_familiaux_diabete": {
             "type": "boolean",
             "description": "Antécédents familiaux de diabète de type 2 au premier degré"

@@ -2,9 +2,13 @@
 Service et client du moteur de calcul du risque de diabète de type 2.
 Respecte scrupuleusement le contrat d'interface figé v1.0 (packages/shared/risk-engine-contract.json).
 """
+import bisect
+import json
+import math
 import uuid
 import logging
-from typing import Dict, Any, List
+from pathlib import Path
+from typing import Dict, Any, List, Optional
 from django.conf import settings
 from django.utils import timezone
 import requests
@@ -171,6 +175,106 @@ class ServiceStubMoteurRisque:
         }
 
 
+class ServiceModeleIA:
+    """
+    Régression logistique DIABSCORE + FINDRISC (v2 slim), entraînée sur NHANES 2017-2020.
+    Exécuté en local lorsque RISK_ENGINE_URL='internal://ia'.
+    Le score (0-100) est le rang percentile du risque dans la cohorte NHANES : les probabilités
+    sont calibrées sur une population américaine et ne doivent pas être affichées telles quelles.
+    """
+    VERSION_MOTEUR = "ia-2.0"
+    CHECKPOINT = Path(__file__).resolve().parent / "ia" / "diabscore_findrisc_v2.json"
+    SEUIL_GLYCEMIE_DIABETE = 7.0      # mmol/L : glycémie à jeun évocatrice d'un diabète
+    SEUIL_GLYCEMIE_PREDIABETE = 5.6   # mmol/L : hyperglycémie modérée à jeun
+    CHAMPS_REQUIS = ["age", "imc", "taille_cm", "tour_taille_cm", "tour_hanches_cm"]
+    LIBELLES = {
+        "diabscore": "DIABSCORE (âge, tour de taille / taille, antécédents familiaux et gestationnels)",
+        "bmi": "Indice de masse corporelle élevé",
+        "waist_hip": "Rapport tour de taille / tour de hanches élevé",
+        "inactive": "Activité physique insuffisante ou sédentarité",
+        "bp_meds": "Hypertension artérielle diagnostiquée",
+        "high_glucose_hist": "Glycémie à jeun modérément élevée (pré-diabète)",
+    }
+    _ckpt = None
+
+    @classmethod
+    def checkpoint(cls) -> Dict[str, Any]:
+        if cls._ckpt is None:
+            cls._ckpt = json.loads(cls.CHECKPOINT.read_text())
+        return cls._ckpt
+
+    @classmethod
+    def evaluer(cls, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Renvoie None si les mesures nécessaires au modèle manquent (repli sur le stub)."""
+        donnees = payload.get("donnees_questionnaire", {})
+        if any(not donnees.get(c) for c in cls.CHAMPS_REQUIS):
+            return None
+        ck = cls.checkpoint()
+
+        glycemie = donnees.get("glycemie_jeun_mmol") if donnees.get("glycemie_jeun_connue") else None
+        x = {
+            "diabscore": (float(donnees["age"])
+                          + 100 * float(donnees["tour_taille_cm"]) / float(donnees["taille_cm"])
+                          + 10 * bool(donnees.get("antecedents_familiaux_diabete"))
+                          + 25 * bool(donnees.get("diabete_gestationnel_antecedent"))),
+            "bmi": float(donnees["imc"]),
+            "waist_hip": float(donnees["tour_taille_cm"]) / float(donnees["tour_hanches_cm"]),
+            "inactive": float(donnees.get("niveau_activite_physique") == "FAIBLE"),
+            "bp_meds": float(bool(donnees.get("hypertension_diagnostiquee"))),
+            "high_glucose_hist": float(glycemie is not None
+                                       and cls.SEUIL_GLYCEMIE_PREDIABETE <= glycemie < cls.SEUIL_GLYCEMIE_DIABETE),
+        }
+        contributions = {
+            f: coef * (x[f] - moy) / ecart
+            for f, coef, moy, ecart in zip(ck["features"], ck["coef"], ck["mean"], ck["scale"])
+        }
+        p = 1 / (1 + math.exp(-(ck["intercept"] + sum(contributions.values()))))
+        score = min(100, bisect.bisect_left(ck["score_quantiles"], p))
+
+        if p < ck["threshold"]:
+            niveau = "FAIBLE"
+        elif score >= ck["eleve_percentile"]:
+            niveau = "ELEVE"
+        else:
+            niveau = "INTERMEDIAIRE"
+
+        # Facteurs : contributions positives au logit, normalisées pour sommer à 1
+        positives = {f: c for f, c in contributions.items() if c > 0}
+        total = sum(positives.values())
+        facteurs: List[Dict[str, Any]] = []
+        for f, c in sorted(positives.items(), key=lambda kv: -kv[1]):
+            binaire = f in ("inactive", "bp_meds", "high_glucose_hist")
+            facteurs.append({
+                "cle": f,
+                "libelle": cls.LIBELLES[f],
+                "poids": round(c / total, 3),
+                "valeur": bool(x[f]) if binaire else round(x[f], 2),
+                "seuil": True if binaire else round(ck["mean"][ck["features"].index(f)], 2),
+                "direction": "PRESENT" if binaire else "AU_DESSUS",
+            })
+
+        # Glycémie à jeun >= 7 mmol/L : diabète probable, orientation prioritaire quel que soit le modèle
+        if glycemie is not None and glycemie >= cls.SEUIL_GLYCEMIE_DIABETE:
+            niveau, score = "ELEVE", 100
+            facteurs.insert(0, {
+                "cle": "glycemie_jeun_mmol",
+                "libelle": f"Glycémie à jeun évocatrice d'un diabète ({glycemie} mmol/L)",
+                "poids": 1.0,
+                "valeur": glycemie,
+                "seuil": cls.SEUIL_GLYCEMIE_DIABETE,
+                "direction": "AU_DESSUS"
+            })
+
+        return {
+            "request_id": str(payload.get("request_id", uuid.uuid4())),
+            "niveau_risque": niveau,
+            "score": float(score),
+            "facteurs": facteurs,
+            "version_moteur": cls.VERSION_MOTEUR,
+            "evalue_le": timezone.now().isoformat()
+        }
+
+
 class ClientMoteurRisque:
     """
     Client de haut niveau pour l'évaluation de risque.
@@ -195,6 +299,14 @@ class ClientMoteurRisque:
 
         if not url or url == 'internal://stub':
             return ServiceStubMoteurRisque.evaluer(payload)
+
+        if url == 'internal://ia':
+            try:
+                resultat = ServiceModeleIA.evaluer(payload)
+            except Exception as exc:
+                logger.exception("Échec du modèle IA local, repli sur le stub: %s", exc)
+                resultat = None
+            return resultat or ServiceStubMoteurRisque.evaluer(payload)
 
         # Appel distant vers le module IA externe
         try:

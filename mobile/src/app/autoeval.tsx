@@ -89,6 +89,8 @@ export default function AutoEvaluationScreen() {
   const [age, setAge]           = useState('');
   const [imc, setImc]           = useState('');
   const [tourTaille, setTourTaille] = useState('');
+  const [taille, setTaille]     = useState('');
+  const [tourHanches, setTourHanches] = useState('');
   const [famille, setFamille]   = useState(false);
   const [hypertension, setHypertension] = useState(false);
   const [diabeteGest, setDiabeteGest]   = useState(false);
@@ -123,6 +125,8 @@ export default function AutoEvaluationScreen() {
           age: Number(age),
           imc: Number(imc),
           tour_taille_cm: tourTaille ? Number(tourTaille) : undefined,
+          taille_cm: taille ? Number(taille) : undefined,
+          tour_hanches_cm: tourHanches ? Number(tourHanches) : undefined,
           antecedents_familiaux_diabete: famille,
           hypertension_diagnostiquee: hypertension,
           diabete_gestationnel_antecedent: diabeteGest,
@@ -247,6 +251,26 @@ export default function AutoEvaluationScreen() {
           keyboardType="numeric"
           value={tourTaille}
           onChangeText={setTourTaille}
+        />
+
+        <Text style={styles.label}>Taille (cm) — optionnel</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ex : 170"
+          placeholderTextColor="#94a3b8"
+          keyboardType="numeric"
+          value={taille}
+          onChangeText={setTaille}
+        />
+
+        <Text style={styles.label}>Tour de hanches (cm) — optionnel</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ex : 100"
+          placeholderTextColor="#94a3b8"
+          keyboardType="numeric"
+          value={tourHanches}
+          onChangeText={setTourHanches}
         />
       </View>
 

@@ -38,6 +38,8 @@ export const AgentPortal: React.FC = () => {
     genre: 'M',
     imc: 26.5,
     tour_taille_cm: 88,
+    taille_cm: 170,
+    tour_hanches_cm: 98,
     antecedents_familiaux_diabete: false,
     hypertension_diagnostiquee: false,
     niveau_activite_physique: 'MODERE',
@@ -124,6 +126,8 @@ export const AgentPortal: React.FC = () => {
           age: Number(donneesScreening.age),
           imc: Number(donneesScreening.imc),
           tour_taille_cm: Number(donneesScreening.tour_taille_cm),
+          taille_cm: Number(donneesScreening.taille_cm),
+          tour_hanches_cm: Number(donneesScreening.tour_hanches_cm),
           glycemie_jeun_mmol: donneesScreening.glycemie_jeun_mmol ? Number(donneesScreening.glycemie_jeun_mmol) : null,
         },
       };
@@ -353,6 +357,34 @@ export const AgentPortal: React.FC = () => {
                   className="form-control"
                   value={donneesScreening.tour_taille_cm}
                   onChange={(e) => setDonneesScreening({ ...donneesScreening, tour_taille_cm: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Taille (cm)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="100"
+                  max="250"
+                  required
+                  className="form-control"
+                  value={donneesScreening.taille_cm}
+                  onChange={(e) => setDonneesScreening({ ...donneesScreening, taille_cm: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Tour de hanches (cm)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="50"
+                  max="200"
+                  required
+                  className="form-control"
+                  value={donneesScreening.tour_hanches_cm}
+                  onChange={(e) => setDonneesScreening({ ...donneesScreening, tour_hanches_cm: Number(e.target.value) })}
                 />
               </div>
             </div>
