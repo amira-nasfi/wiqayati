@@ -57,4 +57,5 @@ class JournalAudit(models.Model):
 
     def __str__(self):
         acteur_str = self.acteur.username if self.acteur else "Système/Anonyme"
-        return f"[{self.horodatage:%Y-%m-%d %H:%M:%S}] {acteur_str} -> {self.get_action_display()} ({self.type_ressource})"
+        horodate = f"{self.horodatage:%Y-%m-%d %H:%M:%S}"
+        return f"[{horodate}] {acteur_str} -> {self.get_action_display()} ({self.type_ressource})"

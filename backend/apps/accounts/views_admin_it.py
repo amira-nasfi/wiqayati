@@ -1,12 +1,11 @@
 """
 Vues administratives IT — Gestion des comptes, consultation des journaux d'audit et monitoring.
 """
-from rest_framework import generics, permissions, status
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import requests
 from django.conf import settings
-from django.utils.translation import gettext_lazy as _
 import redis
 
 from apps.accounts.permissions import EstAdminIT

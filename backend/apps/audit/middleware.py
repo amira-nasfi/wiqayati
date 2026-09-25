@@ -39,17 +39,30 @@ class AuditMiddleware(MiddlewareMixin):
                     return response
 
                 try:
-                    action_map = {
-                        'POST': 'CREATION',
-                        'PUT': 'MODIFICATION',
-                        'PATCH': 'MODIFICATION',
-                        'DELETE': 'SUPPRESSION',
-                    }
+                    if 'plans' in request.path:
+                        action = JournalAudit.Action.MODIFICATION_PLAN
+                    elif 'screening' in request.path:
+                        action = JournalAudit.Action.SOUMISSION_SCREENING
+                    elif 'auth' in request.path:
+                        action = JournalAudit.Action.CONNEXION
+                    else:
+                        action = 'ACTION_API'
+
+                    type_ressource = (
+                        request.path.split('/')[3]
+                        if len(request.path.split('/')) > 3
+                        else 'api'
+                    )
+
+                    id_ressource = ''
+                    if hasattr(response, 'data') and isinstance(response.data, dict):
+                        id_ressource = str(response.data.get('id', ''))
+
                     JournalAudit.objects.create(
                         acteur=user,
-                        action=JournalAudit.Action.MODIFICATION_PLAN if 'plans' in request.path else JournalAudit.Action.SOUMISSION_SCREENING if 'screening' in request.path else JournalAudit.Action.CONNEXION if 'auth' in request.path else 'ACTION_API',
-                        type_ressource=request.path.split('/')[3] if len(request.path.split('/')) > 3 else 'api',
-                        id_ressource=str(getattr(response, 'data', {}).get('id', '')) if hasattr(response, 'data') and isinstance(response.data, dict) else '',
+                        action=action,
+                        type_ressource=type_ressource,
+                        id_ressource=id_ressource,
                         adresse_ip=getattr(request, 'ip_client', None),
                         user_agent=getattr(request, 'user_agent', '')[:500],
                         details={

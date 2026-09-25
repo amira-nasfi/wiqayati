@@ -65,9 +65,18 @@ class StatsParGouvernoratView(APIView):
             ProfilPatient.objects.values('gouvernorat')
             .annotate(
                 total_depistages=Count('reponses_screening'),
-                eleve=Count('evaluations_risque', filter=Q(evaluations_risque__niveau_risque=NiveauRisque.ELEVE)),
-                intermediaire=Count('evaluations_risque', filter=Q(evaluations_risque__niveau_risque=NiveauRisque.INTERMEDIAIRE)),
-                faible=Count('evaluations_risque', filter=Q(evaluations_risque__niveau_risque=NiveauRisque.FAIBLE)),
+                eleve=Count(
+                    'evaluations_risque',
+                    filter=Q(evaluations_risque__niveau_risque=NiveauRisque.ELEVE)
+                ),
+                intermediaire=Count(
+                    'evaluations_risque',
+                    filter=Q(evaluations_risque__niveau_risque=NiveauRisque.INTERMEDIAIRE)
+                ),
+                faible=Count(
+                    'evaluations_risque',
+                    filter=Q(evaluations_risque__niveau_risque=NiveauRisque.FAIBLE)
+                ),
             )
             .order_by('-total_depistages')
         )
@@ -118,12 +127,15 @@ class StatsFacteursRisqueView(APIView):
         alimentation = ReponseScreening.objects.filter(donnees__qualite_alimentation="MAUVAISE").count()
         acanthosis = ReponseScreening.objects.filter(donnees__acanthosis_nigricans=True).count()
 
+        def pct(count):
+            return round(count / total * 100, 1)
+
         facteurs = [
-            {"facteur": "Antécédents familiaux", "total": famille, "pourcentage": round(famille / total * 100, 1)},
-            {"facteur": "Hypertension diagnostiquée", "total": hypertension, "pourcentage": round(hypertension / total * 100, 1)},
-            {"facteur": "Sédentarité (activité faible)", "total": sedentarite, "pourcentage": round(sedentarite / total * 100, 1)},
-            {"facteur": "Tabagisme actif", "total": tabac, "pourcentage": round(tabac / total * 100, 1)},
-            {"facteur": "Alimentation déséquilibrée", "total": alimentation, "pourcentage": round(alimentation / total * 100, 1)},
-            {"facteur": "Acanthosis nigricans", "total": acanthosis, "pourcentage": round(acanthosis / total * 100, 1)},
+            {"facteur": "Antécédents familiaux", "total": famille, "pourcentage": pct(famille)},
+            {"facteur": "Hypertension diagnostiquée", "total": hypertension, "pourcentage": pct(hypertension)},
+            {"facteur": "Sédentarité (activité faible)", "total": sedentarite, "pourcentage": pct(sedentarite)},
+            {"facteur": "Tabagisme actif", "total": tabac, "pourcentage": pct(tabac)},
+            {"facteur": "Alimentation déséquilibrée", "total": alimentation, "pourcentage": pct(alimentation)},
+            {"facteur": "Acanthosis nigricans", "total": acanthosis, "pourcentage": pct(acanthosis)},
         ]
         return Response(facteurs)

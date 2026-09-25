@@ -3,7 +3,7 @@ Sérialiseurs pour la consultation et l'édition des plans de soins par les nutr
 """
 from rest_framework import serializers
 from .models import PlanSoin
-from apps.screening.serializers import ProfilPatientSerializer, ReponseScreeningSerializer
+from apps.screening.serializers import ProfilPatientSerializer
 from apps.risk_engine.serializers import ResultatEvaluationRisqueSerializer
 
 

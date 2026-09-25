@@ -16,9 +16,10 @@ Usage :
   ou
     python manage.py seed_demo   (si enregistré comme commande)
 """
+import datetime
+import io
 import os
 import sys
-import io
 
 # Fix encoding on Windows terminal
 if sys.stdout.encoding != 'utf-8':
@@ -38,14 +39,13 @@ sys.path.insert(0, str(BASE_DIR))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'wiqayati.settings.development')
 django.setup()
 
-from django.utils import timezone
-from django.db import transaction
-import datetime
+from django.utils import timezone  # noqa: E402
+from django.db import transaction  # noqa: E402
 
-from apps.accounts.models import CompteUtilisateur, Role, Notification
-from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumission
-from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
-from apps.care_plan.models import PlanSoin, StatutPlan
+from apps.accounts.models import CompteUtilisateur, Role, Notification  # noqa: E402
+from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumission  # noqa: E402
+from apps.risk_engine.models import ResultatEvaluationRisque  # noqa: E402
+from apps.care_plan.models import PlanSoin, StatutPlan  # noqa: E402
 
 print("=" * 60)
 print("  WIQAYATI — Peuplement de la base de données de démo")
@@ -164,7 +164,7 @@ PATIENTS_DATA = [
     ('TUN10001975', 'Fatma',    'Belhaj',    '1975-07-22', 'F', 'Sfax',     '+21650100002'),
     ('TUN10001968', 'Karim',    'Mansouri',  '1968-11-05', 'M', 'Sousse',   '+21621100003'),
     ('TUN10001990', 'Ines',     'Zouari',    '1990-01-30', 'F', 'Tunis',    '+21625100004'),
-    ('TUN10001955', 'Abdelaziz','Jouini',    '1955-09-12', 'M', 'Sfax',     '+21698100005'),
+    ('TUN10001955', 'Abdelaziz', 'Jouini',   '1955-09-12', 'M', 'Sfax',     '+21698100005'),
     ('TUN10002001', 'Sana',     'Riahi',     '2001-04-18', 'F', 'Monastir', '+21622100006'),
     ('TUN10001963', 'Lotfi',    'Guesmi',    '1963-08-27', 'M', 'Sousse',   '+21695100007'),
     ('TUN10001988', 'Rania',    'Khelifi',   '1988-12-03', 'F', 'Tunis',    '+21620100008'),
@@ -431,7 +431,11 @@ with transaction.atomic():
             statut=statut_plan,
             valide_le=timezone.now() if statut_plan == StatutPlan.VALIDE else None,
             valide_par=valideur,
-            motif_rejet="Dossier incomplet — résultats biologiques manquants." if statut_plan == StatutPlan.REJETE else '',
+            motif_rejet=(
+                "Dossier incomplet — résultats biologiques manquants."
+                if statut_plan == StatutPlan.REJETE
+                else ''
+            ),
         )
         plans_crees.append(plan)
 
@@ -471,7 +475,10 @@ for ins in CITOYENS_DATA:
             Notification.objects.create(
                 destinataire=compte,
                 type_notification=Notification.TypeNotification.PLAN_VALIDE,
-                message=f"Votre plan nutritionnel et d'activité physique a été validé par votre nutritionniste référent. Consultez l'onglet « Mon Plan » pour voir vos recommandations personnalisées.",
+                message=(
+                    "Votre plan nutritionnel et d'activité physique a été validé par votre nutritionniste "
+                    "référent. Consultez l'onglet « Mon Plan » pour voir vos recommandations personnalisées."
+                ),
                 lu=False,
             )
             notifs_creees += 1
@@ -479,7 +486,10 @@ for ins in CITOYENS_DATA:
             Notification.objects.create(
                 destinataire=compte,
                 type_notification=Notification.TypeNotification.PLAN_REJETE,
-                message=f"Votre plan est en cours de révision par votre nutritionniste. Des informations complémentaires sont nécessaires. Vous serez notifié(e) dès sa validation.",
+                message=(
+                    "Votre plan est en cours de révision par votre nutritionniste. "
+                    "Des informations complémentaires sont nécessaires. Vous serez notifié(e) dès sa validation."
+                ),
                 lu=False,
             )
             notifs_creees += 1
@@ -488,7 +498,10 @@ for ins in CITOYENS_DATA:
         Notification.objects.create(
             destinataire=compte,
             type_notification=Notification.TypeNotification.RAPPEL_AUTO_EVALUATION,
-            message="N'oubliez pas de mettre à jour votre auto-évaluation. Une évaluation régulière permet un suivi optimal de votre santé préventive.",
+            message=(
+                "N'oubliez pas de mettre à jour votre auto-évaluation. "
+                "Une évaluation régulière permet un suivi optimal de votre santé préventive."
+            ),
             lu=True,
         )
         notifs_creees += 1
@@ -520,21 +533,21 @@ else:
 print("\n[6/6] Résumé de la base de données de démo")
 print("=" * 60)
 print("\n  COMPTES UTILISATEURS")
-print(f"    Admin IT         : admin.it / Admin2026!")
-print(f"    Admin Ministère  : admin.ministere / Admin2026!")
-print(f"    Nutritionniste 1 : nutri.ben_ali / Nutri2026!")
-print(f"    Nutritionniste 2 : nutri.trabelsi / Nutri2026!")
-print(f"    Nutritionniste 3 : nutri.chaabane / Nutri2026!")
-print(f"    Agent campagne   : agent.campagne.sfax / Agent2026!")
-print(f"    Agent CSP Tunis  : agent.csp.tunis / Agent2026!")
-print(f"    Agent CSP Sousse : agent.csp.sousse / Agent2026!")
-print(f"\n  CITOYENS (connexion mobile — PIN : 1234)")
+print("    Admin IT         : admin.it / Admin2026!")
+print("    Admin Ministère  : admin.ministere / Admin2026!")
+print("    Nutritionniste 1 : nutri.ben_ali / Nutri2026!")
+print("    Nutritionniste 2 : nutri.trabelsi / Nutri2026!")
+print("    Nutritionniste 3 : nutri.chaabane / Nutri2026!")
+print("    Agent campagne   : agent.campagne.sfax / Agent2026!")
+print("    Agent CSP Tunis  : agent.csp.tunis / Agent2026!")
+print("    Agent CSP Sousse : agent.csp.sousse / Agent2026!")
+print("\n  CITOYENS (connexion mobile — PIN : 1234)")
 for ins, (uname, _, _) in CITOYENS_DATA.items():
     p = ProfilPatient.objects.get(ins=ins)
     plan = PlanSoin.objects.filter(patient=p).first()
     statut = plan.get_statut_display() if plan else 'Aucun'
     print(f"    INS: {ins}  ({p.prenom} {p.nom}) — Plan: {statut}")
-print(f"\n  STATISTIQUES")
+print("\n  STATISTIQUES")
 print(f"    Patients      : {ProfilPatient.objects.count()}")
 print(f"    Dépistages    : {ReponseScreening.objects.count()}")
 print(f"    Évaluations   : {ResultatEvaluationRisque.objects.count()}")

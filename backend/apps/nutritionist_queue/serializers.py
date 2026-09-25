@@ -3,8 +3,6 @@ Sérialiseurs pour la file de priorité du nutritionniste.
 """
 from rest_framework import serializers
 from .models import TacheNutritionniste
-from apps.screening.serializers import ProfilPatientSerializer
-from apps.care_plan.models import PlanSoin
 
 
 class TacheNutritionnisteListeSerializer(serializers.ModelSerializer):

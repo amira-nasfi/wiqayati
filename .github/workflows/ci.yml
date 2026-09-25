@@ -75,7 +75,7 @@ jobs:
       - name: Vérifier la syntaxe (Flake8)
         run: |
           pip install flake8
-          flake8 . --max-line-length=120 --exclude=migrations,__pycache__,settings
+          flake8 . --max-line-length=120 --exclude=migrations,__pycache__,settings,.venv,venv
 
       - name: Appliquer les migrations
         run: python manage.py migrate --no-input
@@ -109,7 +109,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Installer les dépendances
         run: npm ci
@@ -146,7 +146,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Installer les dépendances
         run: npm ci --legacy-peer-deps

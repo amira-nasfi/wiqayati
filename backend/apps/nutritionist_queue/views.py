@@ -3,7 +3,7 @@ Vues pour la file de priorité de travail des nutritionnistes.
 """
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, status
+from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _

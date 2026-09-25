@@ -17,7 +17,7 @@ from .serializers import (
 )
 from apps.accounts.permissions import EstNutritionniste
 from apps.accounts.models import CompteUtilisateur, Notification
-from apps.nutritionist_queue.models import TacheNutritionniste, StatutTache
+from apps.nutritionist_queue.models import StatutTache
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,10 @@ class ValidationPlanView(APIView):
                 Notification.objects.create(
                     destinataire=citoyen_compte,
                     type_notification=Notification.TypeNotification.PLAN_VALIDE,
-                    message=_("Votre plan personnalisé de nutrition et d'activité physique a été validé par un nutritionniste. Vous pouvez désormais le consulter dans votre espace.")
+                    message=_(
+                        "Votre plan personnalisé de nutrition et d'activité physique a été validé "
+                        "par un nutritionniste. Vous pouvez désormais le consulter dans votre espace."
+                    )
                 )
         except Exception as exc:
             logger.warning("Échec de création de la notification citoyen : %s", exc)

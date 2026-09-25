@@ -134,7 +134,9 @@ class ClientHapiFhir:
         return None
 
     @classmethod
-    def creer_ou_maj_care_plan(cls, fhir_patient_id: str, plan_data: Dict[str, Any], fhir_id: Optional[str] = None) -> Optional[str]:
+    def creer_ou_maj_care_plan(
+        cls, fhir_patient_id: str, plan_data: Dict[str, Any], fhir_id: Optional[str] = None
+    ) -> Optional[str]:
         """Crée ou met à jour une ressource FHIR CarePlan."""
         url = f"{cls.get_base_url()}/CarePlan"
         headers = {"Content-Type": "application/fhir+json; charset=utf-8"}

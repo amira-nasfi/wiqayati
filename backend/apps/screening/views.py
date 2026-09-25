@@ -4,7 +4,6 @@ Vues pour la gestion des patients, la consultation du questionnaire et la soumis
 import logging
 from django.db import transaction
 from django.utils import timezone
-from django.shortcuts import get_object_or_404
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -18,7 +17,7 @@ from .serializers import (
 )
 from .questionnaire_definitions import DEFINITION_QUESTIONNAIRE_V1
 
-from apps.accounts.permissions import EstAgent, EstCitoyen
+from apps.accounts.permissions import EstAgent
 from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
 from apps.risk_engine.services import ClientMoteurRisque
 from apps.care_plan.models import PlanSoin, StatutPlan
@@ -200,7 +199,9 @@ class SoumissionScreeningView(APIView):
         # 6. Déclenchement de la synchronisation asynchrone FHIR (si Celery dispo)
         try:
             from apps.fhir_bridge.tasks import synchroniser_dossier_complet_fhir
-            synchroniser_dossier_complet_fhir.delay(str(patient.id), str(reponse.id), str(evaluation.id), str(plan.id), str(tache.id))
+            synchroniser_dossier_complet_fhir.delay(
+                str(patient.id), str(reponse.id), str(evaluation.id), str(plan.id), str(tache.id)
+            )
         except Exception as exc:
             logger.warning("Notification Celery FHIR différée : %s", exc)
 
@@ -224,5 +225,7 @@ class SoumissionScreeningView(APIView):
             'plan_soin_id': str(plan.id),
             'statut_plan': plan.statut,
             'priorite_tache': tache.priorite,
-            'message_succes': _("Dépistage enregistré avec succès. Le plan a été transmis à la file des nutritionnistes.")
+            'message_succes': _(
+                "Dépistage enregistré avec succès. Le plan a été transmis à la file des nutritionnistes."
+            )
         }, status=status.HTTP_201_CREATED)

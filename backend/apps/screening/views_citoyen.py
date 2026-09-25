@@ -10,9 +10,8 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.permissions import EstCitoyen
-from apps.accounts.models import CompteUtilisateur, Notification, Role
+from apps.accounts.models import CompteUtilisateur, Role
 from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumission
-from apps.screening.serializers import ProfilPatientSerializer, ReponseScreeningSerializer
 from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
 from apps.risk_engine.services import ClientMoteurRisque
 from apps.care_plan.models import PlanSoin, StatutPlan
@@ -43,7 +42,12 @@ class ConnexionCitoyenView(APIView):
         patient = ProfilPatient.objects.filter(ins=ins).first()
         if not patient:
             return Response(
-                {'erreur': _("Aucun dossier de santé trouvé pour cet INS. Veuillez d'abord vous faire dépister auprès d'un agent.")},
+                {
+                    'erreur': _(
+                        "Aucun dossier de santé trouvé pour cet INS. "
+                        "Veuillez d'abord vous faire dépister auprès d'un agent."
+                    )
+                },
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -160,10 +164,18 @@ class CitoyenPlanActifView(APIView):
                 statut=StatutPlan.BROUILLON
             ).exists()
 
+            if plan_en_attente:
+                message = _(
+                    "Votre plan personnalisé est actuellement en cours d'analyse "
+                    "et de validation par un nutritionniste."
+                )
+            else:
+                message = _("Vous n'avez pas encore de plan de soin actif.")
+
             return Response({
                 'a_un_plan_valide': False,
                 'en_attente_validation': plan_en_attente,
-                'message': _("Votre plan personnalisé est actuellement en cours d'analyse et de validation par un nutritionniste.") if plan_en_attente else _("Vous n'avez pas encore de plan de soin actif.")
+                'message': message,
             })
 
         return Response({
@@ -195,7 +207,10 @@ class CitoyenAutoEvaluationView(APIView):
 
         donnees = request.data.get('donnees')
         if not donnees:
-            return Response({'erreur': _("Les réponses du questionnaire sont obligatoires.")}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'erreur': _("Les réponses du questionnaire sont obligatoires.")},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         reponse = ReponseScreening.objects.create(
             patient=patient,
@@ -251,7 +266,10 @@ class CitoyenAutoEvaluationView(APIView):
         )
 
         return Response({
-            'message': _("Votre auto-évaluation a été enregistrée avec succès. Un nutritionniste révisera votre plan personnalisé."),
+            'message': _(
+                "Votre auto-évaluation a été enregistrée avec succès. "
+                "Un nutritionniste révisera votre plan personnalisé."
+            ),
             'evaluation': {
                 'id': str(evaluation.id),
                 'niveau_risque': evaluation.niveau_risque,

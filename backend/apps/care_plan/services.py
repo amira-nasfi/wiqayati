@@ -46,7 +46,10 @@ class GenerateurPlanSoin:
                     "Consommer 2 portions de fruits frais entiers par jour en dehors des gros repas",
                     "Éviter les boissons gazeuses et jus industriels"
                 ],
-                "conseils_specifiques": "Structurer les assiettes selon le modèle santé : 1/2 légumes, 1/4 protéines maigres, 1/4 féculents complets.",
+                "conseils_specifiques": (
+                    "Structurer les assiettes selon le modèle santé : "
+                    "1/2 légumes, 1/4 protéines maigres, 1/4 féculents complets."
+                ),
                 "frequence_suivi": "Bilan nutritionnel trimestriel conseillé"
             }
             activite = {

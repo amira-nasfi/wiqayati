@@ -10,6 +10,14 @@ from .views import (
 
 urlpatterns = [
     path('file/', FilePrioriteNutritionnisteView.as_view(), name='nutritionniste-file'),
-    path('file/<uuid:pk>/prendre-en-charge/', PrendreEnChargeTacheView.as_view(), name='nutritionniste-prendre-en-charge'),
-    path('patients/<str:ins>/historique/', HistoriquePatientNutritionnisteView.as_view(), name='nutritionniste-patient-historique'),
+    path(
+        'file/<uuid:pk>/prendre-en-charge/',
+        PrendreEnChargeTacheView.as_view(),
+        name='nutritionniste-prendre-en-charge'
+    ),
+    path(
+        'patients/<str:ins>/historique/',
+        HistoriquePatientNutritionnisteView.as_view(),
+        name='nutritionniste-patient-historique'
+    ),
 ]

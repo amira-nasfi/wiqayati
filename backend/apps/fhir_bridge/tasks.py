@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
-def synchroniser_dossier_complet_fhir(self, patient_id: str, reponse_id: str, evaluation_id: str, plan_id: str, tache_id: str = None):
+def synchroniser_dossier_complet_fhir(
+    self, patient_id: str, reponse_id: str, evaluation_id: str, plan_id: str, tache_id: str = None
+):
     """
     Synchronise le dossier de santé complet avec HAPI FHIR :
     1. Patient
@@ -90,7 +92,11 @@ def synchroniser_dossier_complet_fhir(self, patient_id: str, reponse_id: str, ev
         return "SUCCES"
 
     except Exception as exc:
-        logger.warning("Échec de la tâche synchroniser_dossier_complet_fhir (tentative %d): %s", self.request.retries, exc)
+        logger.warning(
+            "Échec de la tâche synchroniser_dossier_complet_fhir (tentative %d): %s",
+            self.request.retries,
+            exc
+        )
         try:
             raise self.retry(exc=exc)
         except Exception:

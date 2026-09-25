@@ -221,7 +221,9 @@ class Command(BaseCommand):
                     evaluation_risque=evaluation,
                     plan_nutrition=nutrition,
                     plan_activite=activite,
-                    notes_nutritionniste="Patient très réceptif aux conseils d'équilibre alimentaire." if est_valide else "",
+                    notes_nutritionniste=(
+                        "Patient très réceptif aux conseils d'équilibre alimentaire." if est_valide else ""
+                    ),
                     statut=StatutPlan.VALIDE if est_valide else StatutPlan.BROUILLON,
                     valide_le=timezone.now() if est_valide else None,
                     valide_par=CompteUtilisateur.objects.get(username='nutritionniste1') if est_valide else None
@@ -239,6 +241,9 @@ class Command(BaseCommand):
                     statut=StatutTache.COMPLETE if est_valide else StatutTache.DEMANDE
                 )
 
-                self.stdout.write(f"  - Patient {patient.ins} ({patient.prenom} {patient.nom}) : Risque {evaluation.niveau_risque} ({evaluation.score}/100)")
+                self.stdout.write(
+                    f"  - Patient {patient.ins} ({patient.prenom} {patient.nom}) : "
+                    f"Risque {evaluation.niveau_risque} ({evaluation.score}/100)"
+                )
 
         self.stdout.write(self.style.SUCCESS("\nInitialisation terminée avec succès !"))

@@ -4,9 +4,8 @@ Tests d'intégration du flux de dépistage, de l'unicité par INS et du portail 
 from django.test import TestCase
 from rest_framework.test import APIClient
 from apps.accounts.models import CompteUtilisateur, Role
-from apps.screening.models import ProfilPatient, ReponseScreening
+from apps.screening.models import ProfilPatient
 from apps.care_plan.models import PlanSoin, StatutPlan
-from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache
 
 
 class TestFluxDepistageEtUniciteINS(TestCase):

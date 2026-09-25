@@ -179,7 +179,9 @@ class ClientMoteurRisque:
     """
 
     @classmethod
-    def evaluer(cls, ins_patient: str, donnees_questionnaire: Dict[str, Any], contexte: Dict[str, Any]) -> Dict[str, Any]:
+    def evaluer(
+        cls, ins_patient: str, donnees_questionnaire: Dict[str, Any], contexte: Dict[str, Any]
+    ) -> Dict[str, Any]:
         request_id = str(uuid.uuid4())
         payload = {
             "request_id": request_id,
