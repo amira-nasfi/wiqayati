@@ -13,14 +13,42 @@ import * as SecureStore from 'expo-secure-store';
 //
 // ⚠️ Si vous utilisez Expo Go sur un appareil physique, vérifiez que votre
 //    téléphone et votre PC sont sur le même réseau Wi-Fi.
-const HOST_LAN_IP = '192.168.1.6'; // IP Wi-Fi de la machine hôte
+import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 
-export const BASE_API_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:8000/api/v1'           // navigateur — même machine
-    : Platform.OS === 'android'
-      ? 'http://10.0.2.2:8000/api/v1'          // émulateur Android
-      : `http://${HOST_LAN_IP}:8000/api/v1`;  // Expo Go iOS ou Android physique
+// IP Wi-Fi de la machine hôte (secours si Constants.expoConfig?.hostUri n'est pas dispo)
+const HOST_LAN_IP = '192.168.1.6';
+
+/**
+ * Détermine dynamiquement l'URL de l'API :
+ * - Web : localhost:8000
+ * - Émulateur Android (virtuel) : 10.0.2.2:8000
+ * - Appareil physique (Android ou iOS) : IP dynamique du serveur Expo / Wi-Fi
+ */
+const getBaseApiUrl = (): string => {
+  if (Platform.OS === 'web') {
+    return 'http://localhost:8000/api/v1';
+  }
+
+  // Émulateur Android uniquement (pas un vrai appareil)
+  if (Platform.OS === 'android' && !Device.isDevice) {
+    return 'http://10.0.2.2:8000/api/v1';
+  }
+
+  // Appareil physique (Expo Go sur Android ou iOS)
+  // Récupère automatiquement l'adresse IP depuis Metro Bundler
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+      return `http://${ip}:8000/api/v1`;
+    }
+  }
+
+  return `http://${HOST_LAN_IP}:8000/api/v1`;
+};
+
+export const BASE_API_URL = getBaseApiUrl();
 
 export const CLE_TOKEN_ACCES   = 'wiqayati_access';
 export const CLE_TOKEN_REFRESH = 'wiqayati_refresh';

@@ -14,6 +14,7 @@ import apiMobile, {
   sauvegarderTokens,
   supprimerTokens,
   lireTokenAcces,
+  BASE_API_URL,
 } from './client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -88,10 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await chargerProfil();
       setEstConnecte(true);
     } catch (err: any) {
-      const msg =
-        err.response?.data?.erreur ||
-        err.response?.data?.detail ||
-        "Échec de connexion. Vérifiez votre INS et votre code PIN.";
+      console.error('[AUTH ERROR]', err);
+      let msg = "Échec de connexion. Vérifiez votre INS et votre code PIN.";
+      if (!err.response) {
+        msg = `Erreur réseau : impossible de contacter le serveur (${err.message || 'délai dépassé'}). URL: ${BASE_API_URL}`;
+      } else if (err.response?.data?.erreur) {
+        msg = err.response.data.erreur;
+      } else if (err.response?.data?.detail) {
+        msg = err.response.data.detail;
+      }
       setErreurConnexion(msg);
       throw new Error(msg);
     }
