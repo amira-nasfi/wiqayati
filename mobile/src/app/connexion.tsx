@@ -17,6 +17,7 @@ import {
   Easing,
 } from 'react-native';
 import { useAuth } from '../api/authContext';
+import { BASE_API_URL } from '../api/client';
 
 export default function ConnexionScreen() {
   const { seConnecter } = useAuth();
@@ -140,6 +141,9 @@ export default function ConnexionScreen() {
             Ministère de la Santé · République Tunisienne
           </Text>
           <Text style={styles.piedVersion}>Version 1.0.0</Text>
+          <Text style={[styles.piedVersion, { fontSize: 10, marginTop: 4, color: '#64748b' }]}>
+            Serveur : {BASE_API_URL}
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

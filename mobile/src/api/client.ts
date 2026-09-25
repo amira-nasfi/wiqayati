@@ -36,16 +36,16 @@ const getBaseApiUrl = (): string => {
   }
 
   // Appareil physique (Expo Go sur Android ou iOS)
-  // Récupère automatiquement l'adresse IP depuis Metro Bundler
+  // Utilise le proxy Node.js (port 8008) qui passe le pare-feu Windows sans blocage
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const ip = hostUri.split(':')[0];
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
-      return `http://${ip}:8000/api/v1`;
+      return `http://${ip}:8008/api/v1`;
     }
   }
 
-  return `http://${HOST_LAN_IP}:8000/api/v1`;
+  return `http://${HOST_LAN_IP}:8008/api/v1`;
 };
 
 export const BASE_API_URL = getBaseApiUrl();
