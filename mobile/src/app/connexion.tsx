@@ -22,6 +22,7 @@ import { AlertTriangle, CreditCard, Calendar, CheckCircle, User, Lock } from 'lu
 import { useAuth } from '../api/authContext';
 import { BASE_API_URL } from '../api/client';
 import { WiqayatiTokens } from '../constants/theme';
+import DatePickerInput from '../components/DatePickerInput';
 
 const LOGO = require('../../assets/images/logo.png');
 
@@ -201,22 +202,15 @@ export default function ConnexionScreen({ onRetour }: ConnexionScreenProps = {})
                 )}
               </View>
 
-              <View style={styles.champWrapper}>
-                <View style={styles.champIcone}>
-                  <Calendar size={16} color={WiqayatiTokens.colors.textMuted} />
-                </View>
-                <Text style={styles.label}>Date de naissance (AAAA-MM-JJ)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ex : 1980-03-15"
-                  placeholderTextColor={WiqayatiTokens.colors.textMuted}
-                  value={dateNaissance}
-                  onChangeText={(t) => { setDateNaissance(t); setErreur(null); }}
-                  returnKeyType="done"
-                  onSubmitEditing={handleConnexion}
-                  editable={!chargement}
-                />
-              </View>
+              <DatePickerInput
+                value={dateNaissance}
+                onChange={(d) => {
+                  setDateNaissance(d);
+                  setErreur(null);
+                }}
+                label="Date de naissance"
+                disabled={chargement}
+              />
             </>
           )}
 
@@ -279,6 +273,40 @@ export default function ConnexionScreen({ onRetour }: ConnexionScreenProps = {})
               <Text style={styles.btnConnexionTexte}>Accéder à mon espace →</Text>
             )}
           </TouchableOpacity>
+
+          {/* Raccourcis de test / démo */}
+          <View style={styles.demoSection}>
+            <Text style={styles.demoTitre}>Comptes de test (remplissage automatique) :</Text>
+            <View style={styles.demoBtns}>
+              <TouchableOpacity
+                style={styles.demoBtn}
+                onPress={() => {
+                  setMode('cin');
+                  setCin('08123456');
+                  setDateNaissance('1980-03-15');
+                  setErreur(null);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.demoBtnNom}>M. Haddad (Élevé)</Text>
+                <Text style={styles.demoBtnDetails}>CIN: 08123456 • 15 mars 1980</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.demoBtn}
+                onPress={() => {
+                  setMode('cin');
+                  setCin('09234567');
+                  setDateNaissance('1975-07-22');
+                  setErreur(null);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.demoBtnNom}>F. Belhaj (Brouillon)</Text>
+                <Text style={styles.demoBtnDetails}>CIN: 09234567 • 22 juil. 1975</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </Animated.View>
 
         {/* Pied */}
@@ -442,6 +470,42 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 15,
     letterSpacing: 0.3,
+  },
+  demoSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: WiqayatiTokens.colors.border,
+  },
+  demoTitre: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: WiqayatiTokens.colors.textMuted,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  demoBtns: {
+    flexDirection: 'column',
+    gap: 8,
+  },
+  demoBtn: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  demoBtnNom: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: WiqayatiTokens.colors.textPrimary,
+  },
+  demoBtnDetails: {
+    fontSize: 11,
+    color: WiqayatiTokens.colors.textSecondary,
+    marginTop: 2,
   },
   pied: {
     alignItems: 'center',

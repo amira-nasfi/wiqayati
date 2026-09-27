@@ -2,6 +2,7 @@
 Vues pour l'espace mobile citoyen (Wiqayati Citoyen).
 Le citoyen n'accède strictement qu'à son propre dossier déterminé par son INS.
 """
+from datetime import datetime
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -39,7 +40,25 @@ class ConnexionCitoyenView(APIView):
 
         # Identification par CIN + Date de naissance
         if cin and date_naissance:
-            patient = ProfilPatient.objects.filter(cin=cin, date_naissance=date_naissance).first()
+            date_parsed = None
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d'):
+                try:
+                    date_parsed = datetime.strptime(date_naissance, fmt).date()
+                    break
+                except ValueError:
+                    pass
+
+            if not date_parsed:
+                return Response(
+                    {'erreur': _("Format de date invalide. Veuillez utiliser le sélecteur de date (AAAA-MM-JJ).")},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                patient = ProfilPatient.objects.filter(cin=cin, date_naissance=date_parsed).first()
+            except Exception:
+                patient = None
+
             if not patient:
                 return Response(
                     {'erreur': _("Aucun dossier de santé trouvé pour ce numéro CIN et cette date de naissance.")},

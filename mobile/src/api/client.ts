@@ -17,17 +17,18 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 
 // IP Wi-Fi de la machine hôte (secours si Constants.expoConfig?.hostUri n'est pas dispo)
-const HOST_LAN_IP = '192.168.1.6';
+const HOST_LAN_IP = '192.168.100.201';
 
 /**
  * Détermine dynamiquement l'URL de l'API :
- * - Web : localhost:8000
+ * - Web : hostname de la machine hôte : 8000
  * - Émulateur Android (virtuel) : 10.0.2.2:8000
  * - Appareil physique (Android ou iOS) : IP dynamique du serveur Expo / Wi-Fi
  */
 const getBaseApiUrl = (): string => {
   if (Platform.OS === 'web') {
-    return 'http://localhost:8000/api/v1';
+    const host = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
+    return `http://${host}:8000/api/v1`;
   }
 
   // Émulateur Android uniquement (pas un vrai appareil)
