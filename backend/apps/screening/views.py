@@ -21,7 +21,6 @@ from apps.accounts.permissions import EstAgent
 from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
 from apps.risk_engine.services import ClientMoteurRisque, ServiceProtocoleML
 from apps.care_plan.models import PlanSoin, StatutPlan
-from apps.care_plan.services import GenerateurPlanSoin
 from apps.care_plan.agent_hybride import AgentHybridePlanSoin
 from apps.fhir_bridge.client import ClientHapiFhir
 from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache, StatutTache

@@ -73,7 +73,8 @@ class TestAgentHybrideSecurite(TestCase):
                     self.assertTrue(it["action"].startswith("Action reformulée par LLM"))
 
     def test_2_llm_invalid_json_fallback_returns_deterministic_prose_source(self):
-        """Cas 2: Le LLM renvoie du JSON invalide -> bascule sur la baseline déterministe avec prose_source='deterministic'."""
+        """Cas 2: Le LLM renvoie du JSON invalide -> bascule sur la baseline déterministe
+        avec prose_source='deterministic'."""
         agent = AgentHybridePlanSoin(self.assessment, self.form)
         baseline = agent._generer_baseline_deterministe()
         baseline_count = len(baseline["items"])

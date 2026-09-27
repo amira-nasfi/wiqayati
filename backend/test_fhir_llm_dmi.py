@@ -5,9 +5,10 @@ import requests
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "wiqayati.settings.development")
 django.setup()
 
-from apps.fhir_bridge.client import ClientHapiFhir
-from apps.care_plan.agent_hybride import AgentHybridePlanSoin
-from apps.risk_engine.services import ClientMoteurRisque
+from apps.fhir_bridge.client import ClientHapiFhir  # noqa: E402
+from apps.care_plan.agent_hybride import AgentHybridePlanSoin  # noqa: E402
+from apps.risk_engine.services import ClientMoteurRisque  # noqa: E402
+from apps.risk_engine.ml.protocol_engine import generate_protocol  # noqa: E402
 
 base_url = ClientHapiFhir.get_base_url()
 print("1. Testing FHIR base URL:", base_url)
@@ -33,9 +34,17 @@ print("2. Patient FHIR ID created/updated:", patient_fhir_id)
 cond_url = f"{base_url}/Condition"
 cond_res = requests.post(cond_url, json={
     "resourceType": "Condition",
-    "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]},
+    "clinicalStatus": {
+        "coding": [{"system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active"}]
+    },
     "subject": {"reference": f"Patient/{patient_fhir_id}"},
-    "code": {"coding": [{"system": "http://hl7.org/fhir/sid/icd-10", "code": "I10", "display": "Hypertension artérielle essentielle"}]},
+    "code": {
+        "coding": [{
+            "system": "http://hl7.org/fhir/sid/icd-10",
+            "code": "I10",
+            "display": "Hypertension artérielle essentielle"
+        }]
+    },
     "onsetDateTime": "2019-04-10"
 }, timeout=5)
 print("3. Condition created status:", cond_res.status_code)
@@ -46,7 +55,11 @@ obs_res = requests.post(obs_url, json={
     "resourceType": "Observation",
     "status": "final",
     "subject": {"reference": f"Patient/{patient_fhir_id}"},
-    "code": {"coding": [{"system": "http://loinc.org", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood"}]},
+    "code": {
+        "coding": [
+            {"system": "http://loinc.org", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood"}
+        ]
+    },
     "valueQuantity": {"value": 6.2, "unit": "%"}
 }, timeout=5)
 print("4. Observation created status:", obs_res.status_code)
@@ -55,7 +68,11 @@ print("4. Observation created status:", obs_res.status_code)
 allergy_url = f"{base_url}/AllergyIntolerance"
 allergy_res = requests.post(allergy_url, json={
     "resourceType": "AllergyIntolerance",
-    "clinicalStatus": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical", "code": "active"}]},
+    "clinicalStatus": {
+        "coding": [
+            {"system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical", "code": "active"}
+        ]
+    },
     "patient": {"reference": f"Patient/{patient_fhir_id}"},
     "code": {"text": "Pamplemousse"}
 }, timeout=5)
@@ -94,8 +111,6 @@ print("Score:", assessment.get("score"))
 print("Risk band:", assessment.get("niveau_risque"))
 
 # 7. Run protocol_engine with real FHIR DMI
-from apps.risk_engine.ml.protocol_engine import generate_protocol
-
 protocol = generate_protocol(assessment, form_data, dmi=dmi, language="fr")
 print("\n--- Protocol Engine Output with FHIR DMI ---")
 print("Protocol ID:", protocol.get("protocol_id"))
@@ -113,7 +128,10 @@ agent = AgentHybridePlanSoin(assessment=assessment, form=form_data, dmi=dmi)
 llm_rephrased = [
     {
         "trigger": "dmi_hypertension",
-        "action": "Une hypertension essentielle est notée dans votre DMI FHIR. Réduisez les apports en sel (< 5g/j) et adoptez un menu DASH.",
+        "action": (
+            "Une hypertension essentielle est notée dans votre DMI FHIR. "
+            "Réduisez les apports en sel (< 5g/j) et adoptez un menu DASH."
+        ),
         "target": "Sel < 5g/jour"
     }
 ]

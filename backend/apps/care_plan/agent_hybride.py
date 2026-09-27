@@ -24,16 +24,26 @@ import json
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-_PROVIDER = lambda: getattr(settings, "AGENT_HYBRIDE_PROVIDER", "stub")
-_MODEL = lambda: getattr(settings, "AGENT_HYBRIDE_MODEL", "gemini-2.0-flash")
-_MAX_TOKENS = lambda: getattr(settings, "AGENT_HYBRIDE_MAX_TOKENS", 2048)
-_TIMEOUT = lambda: getattr(settings, "AGENT_HYBRIDE_TIMEOUT_S", 15)
+
+def _PROVIDER():
+    return getattr(settings, "AGENT_HYBRIDE_PROVIDER", "stub")
+
+
+def _MODEL():
+    return getattr(settings, "AGENT_HYBRIDE_MODEL", "gemini-2.0-flash")
+
+
+def _MAX_TOKENS():
+    return getattr(settings, "AGENT_HYBRIDE_MAX_TOKENS", 2048)
+
+
+def _TIMEOUT():
+    return getattr(settings, "AGENT_HYBRIDE_TIMEOUT_S", 15)
 
 
 # ===========================================================================
@@ -154,13 +164,19 @@ class AgentHybridePlanSoin:
 
         except _LlmTimeout:
             logger.warning("Agent Hybride: timeout LLM après %d s — fallback baseline.", _TIMEOUT())
-            return self._formater_rapport_final(baseline_protocol, prose_source="deterministic", raison="llm_timeout")
+            return self._formater_rapport_final(
+                baseline_protocol, prose_source="deterministic", raison="llm_timeout"
+            )
         except _LlmError as exc:
             logger.warning("Agent Hybride: erreur LLM (%s) — fallback baseline.", exc)
-            return self._formater_rapport_final(baseline_protocol, prose_source="deterministic", raison=f"llm_error: {exc}")
+            return self._formater_rapport_final(
+                baseline_protocol, prose_source="deterministic", raison=f"llm_error: {exc}"
+            )
         except Exception as exc:
             logger.exception("Agent Hybride: erreur inattendue — fallback baseline (%s)", exc)
-            return self._formater_rapport_final(baseline_protocol, prose_source="deterministic", raison=f"unexpected: {exc}")
+            return self._formater_rapport_final(
+                baseline_protocol, prose_source="deterministic", raison=f"unexpected: {exc}"
+            )
 
     def _generer_baseline_deterministe(self) -> dict:
         """Appelle protocol_engine.generate_protocol pour obtenir la référence clinique absolue."""
@@ -358,8 +374,12 @@ class AgentHybridePlanSoin:
             "items_a_reformuler": items_a_reformuler,
         }
 
+        instruction_intro = (
+            "Voici les données du patient et la liste des recommandations à reformuler "
+            "en français médical chaleureux et accessible :\n"
+        )
         return (
-            "Voici les données du patient et la liste des recommandations à reformuler en français médical chaleureux et accessible :\n"
+            instruction_intro
             + json.dumps(payload, ensure_ascii=False, indent=2)
             + "\n\nReformule uniquement 'action' et 'target' pour chaque trigger sans ajouter ni enlever d'items."
         )
@@ -469,8 +489,8 @@ class AgentHybridePlanSoin:
         if texte.startswith("```"):
             lines = texte.split("\n")
             texte = "\n".join(
-                l for l in lines
-                if not l.strip().startswith("```")
+                line for line in lines
+                if not line.strip().startswith("```")
             ).strip()
 
         try:

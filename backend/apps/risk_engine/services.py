@@ -13,9 +13,16 @@ import sys
 import logging
 import warnings
 from typing import Dict, Any, List
-from django.conf import settings
 from django.utils import timezone
-import requests
+
+from apps.risk_engine.client import ClientMoteurRisque
+
+__all__ = [
+    "ClientMoteurRisque",
+    "ServiceStubMoteurRisque",
+    "ServiceMLMoteurRisque",
+    "ServiceProtocoleML",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -276,8 +283,3 @@ class ServiceProtocoleML:
         except Exception as exc:
             logger.exception("Erreur génération protocole ML: %s", exc)
             return None
-
-
-# Re-export de ClientMoteurRisque vers apps.risk_engine.client
-from apps.risk_engine.client import ClientMoteurRisque
-

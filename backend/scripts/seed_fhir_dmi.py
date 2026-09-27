@@ -20,9 +20,7 @@ Patients couverts (9 profils cliniques) :
 """
 
 import argparse
-import json
 import sys
-from datetime import date
 import requests
 
 if hasattr(sys.stdout, "reconfigure"):

@@ -2,6 +2,7 @@
 Vues pour l'espace mobile citoyen (Wiqayati Citoyen).
 Le citoyen n'accède strictement qu'à son propre dossier déterminé par son INS.
 """
+import logging
 from datetime import datetime
 from rest_framework import status, permissions
 from rest_framework.views import APIView
@@ -16,11 +17,12 @@ from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumissio
 from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
 from apps.risk_engine.services import ClientMoteurRisque, ServiceProtocoleML
 from apps.care_plan.models import PlanSoin, StatutPlan
-from apps.care_plan.services import GenerateurPlanSoin
 from apps.care_plan.agent_hybride import AgentHybridePlanSoin
 from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache, StatutTache
 from apps.fhir_bridge.client import ClientHapiFhir
 from .questionnaire_definitions import DEFINITION_QUESTIONNAIRE_V1
+
+logger = logging.getLogger(__name__)
 
 
 class ConnexionCitoyenView(APIView):

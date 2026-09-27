@@ -120,9 +120,6 @@ class TestClientMoteurRisqueWiring(TestCase):
     """
 
     def setUp(self):
-        import os
-        from unittest.mock import patch, MagicMock
-
         self.sample_payload = {
             "request_id": "test-req-001",
             "ins_patient": "TUN10001234",
@@ -176,7 +173,10 @@ class TestClientMoteurRisqueWiring(TestCase):
         import os
         from unittest.mock import patch
         with patch.dict(os.environ, {"ML_MODE": ""}):
-            with patch("apps.risk_engine.client._ml_adapter.run_pipeline", side_effect=RuntimeError("Panne ML simulée")):
+            with patch(
+                "apps.risk_engine.client._ml_adapter.run_pipeline",
+                side_effect=RuntimeError("Panne ML simulée")
+            ):
                 with self.assertRaises(ConnectionError) as ctx:
                     ClientMoteurRisque.evaluer(self.sample_payload)
                 self.assertIn("Échec de l'évaluation ML", str(ctx.exception))
@@ -199,7 +199,10 @@ class TestClientMoteurRisqueWiring(TestCase):
         import os
         from unittest.mock import patch
         with patch.dict(os.environ, {"ML_MODE": ""}):
-            with patch("apps.fhir_bridge.client.ClientHapiFhir.lire_dossier_patient", return_value={"dmi_disponible": False}):
+            with patch(
+                "apps.fhir_bridge.client.ClientHapiFhir.lire_dossier_patient",
+                return_value={"dmi_disponible": False}
+            ):
                 payload = dict(self.sample_payload)
                 res = ClientMoteurRisque.evaluer_avec_dmi(payload, ins="TUN10001234")
 
@@ -221,4 +224,3 @@ class TestClientMoteurRisqueWiring(TestCase):
             self.assertIsInstance(res, dict)
             self.assertIn("score", res)
             self.assertIn("niveau_risque", res)
-

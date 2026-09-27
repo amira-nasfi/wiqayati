@@ -7,310 +7,292 @@
 [![React 19](https://img.shields.io/badge/react-19-cyan.svg)](https://react.dev/)
 [![Expo 52+](https://img.shields.io/badge/expo-52+-black.svg)](https://expo.dev/)
 [![HL7 FHIR R4](https://img.shields.io/badge/interop-HL7_FHIR_R4-firebrick.svg)](https://hl7.org/fhir/R4/)
+[![Machine Learning](https://img.shields.io/badge/ML-NHANES_Dysglycemia_AUC_0.737-purple.svg)](backend/apps/risk_engine/ml/)
 
 ---
 
 ## 📌 Présentation du Projet
 
-**Wiqayati** est une solution numérique intégrée conçue pour le système de santé tunisien (Ministère de la Santé publique, Centres de Soins Primaires - CSP, et campagnes mobiles de dépistage). Elle permet :
+**Wiqayati** est une solution numérique de santé publique conçue pour la Tunisie (Ministère de la Santé publique, Centres de Soins Primaires - CSP et campagnes mobiles de dépistage). Elle allie **règles cliniques validées**, **modèle prédictif de machine learning** et **agent conversationnel hybride (LLM)** sous haute sécurité clinique :
 
-1. **L'identification unique des patients** grâce à l'Identifiant National de Santé (**INS**).
-2. **Le dépistage ciblé du diabète de type 2** à travers un questionnaire clinique standardisé administré par des agents de santé ou complété en auto-évaluation par les citoyens.
-3. **L'évaluation instantanée du risque** via un moteur algorithmique/ML (score FINDRISC adapté au contexte épidémiologique et nutritionnel tunisien : *Faible*, *Intermédiaire*, *Élevé*).
-4. **La génération assistée par Agent Hybride (Formulaire + DMI)** : remplacement du moteur de règles statique (« engine ruler ») par un agent cognitif avec garde-fous cliniques déterministes, extrayant les antécédents, traitements et bilans du Dossier Médical Informatisé pour produire des plans personnalisés (nutrition méditerranéenne tunisienne + activité physique adaptée), certifiés par un nutritionniste.
-5. **La gestion d'une file d'attente prioritaire** pour les professionnels de santé (`STAT` pour risque élevé, `URGENT` pour intermédiaire, `ROUTINE` pour faible).
-6. **Le suivi citoyen sur mobile** (consultation des recommandations, historique, alertes et auto-évaluation).
-7. **Le pilotage épidémiologique ministériel** via un tableau de bord analytique par gouvernorat.
-8. **L'interopérabilité HL7/FHIR R4** avec le Dossier Médical Partagé (serveur HAPI FHIR : ressources *Patient*, *QuestionnaireResponse*, *RiskAssessment*, *CarePlan*).
+1. **Identification unique** : Pivot national basé sur l'Identifiant National de Santé (**INS**) et recherche citoyenne simplifiée par **CIN (8 chiffres) + Date de naissance**.
+2. **Formulaire de dépistage clinique v2.0** : Questionnaire étendu comprenant les biométries (`taille_cm`, `poids_kg`, `tour_taille_cm`, IMC auto-calculé, ratio taille/hanche), les antécédents médicaux (`high_glucose_hist`, HTA, corticoïdes, etc.) et le mode de vie (activité, alimentation, tabac). Rétrocompatibilité complète avec les clients v1.0.
+3. **Moteur d'évaluation du risque hybride** :
+   - **Score FINDRISC** (0-26) calibré en échelle 0-100 (*Faible*, *Intermédiaire*, *Élevé*).
+   - **Score DIABSCORE** validé sur population tunisienne (Gannar et al. 2018, seuil T2D $\ge 90$).
+   - **Détecteur ML de dysglycémie** : Modèle de régression logistique calibré par régression isotonique entraîné sur NHANES (23 966 adultes, 10 features cliniques, AUC pooled OOF 0.737, HL $p=0.34$).
+   - **Client Python sécurisé (`ClientMoteurRisque`)** : Pas de `os.chdir()`, timeout maîtrisé (12s), absence de fallback silencieux vers des chiffres arbitraires (`ML_MODE=stub` disponible pour les tests).
+4. **Agent Hybride LLM & Moteur Déterministe (`apps.care_plan.agent_hybride`)** :
+   - Appel déterministe initial à `protocol_engine` (règles cliniques, ADA/DPP, contexte tunisien).
+   - Reformulation ciblée par LLM : le modèle linguistique ne reformule que les champs textuels `action` et `target`.
+   - Fusion stricte par nom de déclencheur (`trigger`) : préservation intégrale des métadonnées cliniques (`priority`, `category`, `title`, `evidence`, `source`).
+   - Traçabilité : chaque recommandation est marquée `"metadata": {"prose_source": "llm" | "deterministic"}`.
+   - Ré-application systématique des garde-fous cliniques post-fusion (`_apply_guardrails`).
+   - Fallback déterministe instantané en cas d'erreur ou d'indisponibilité du LLM.
+5. **Interopérabilité HL7/FHIR R4 & Dossier Médical Informatisé (DMI)** :
+   - Serveur conteneurisé HAPI FHIR R4 (`http://localhost:8085/fhir`).
+   - Extraction automatique en lecture seule du DMI patient : *Conditions* actives (CIM-10), *Observations* biologiques (HbA1c, glycémie), *Traitements* et *Allergies*.
+   - Intégration dans le protocole de soin (ex : restriction sodée DASH pour HTA documentée, évitement d'allergènes alimentaires).
+6. **Espace Citoyen Préventif & Avertissement Légal (Wellness Disclaimer)** :
+   - Mention légale d'outil de bien-être et d'éducation à la santé bilingue (Français & Arabe, v1.0) systématiquement incluse.
+   - Étanchéité absolue de l'API citoyenne (exclusion du `rapport_agent`, des `urgent_flags`, des orientations médicales internes et des valeurs DMI brutes).
+   - Visualisation du **risque à 10 ans** (FINDRISC) avec mention de la cohorte source et **simulation d'impact DPP** (*« Si vous perdez 7 % de votre poids et marchez 30 min/jour : votre risque descend à X % »*).
+7. **File d'attente nutritionniste priorisée** : Triage automatique des plans (`STAT`, `URGENT`, `ROUTINE`) pour certification avant diffusion.
+8. **Tableau de bord ministériel** : Cartographie épidémiologique et KPIs par gouvernorat.
 
 ---
 
 ## 🏗️ Architecture Technique
-
-Le projet est structuré sous forme de **monorepo** :
 
 ```text
 wiqayati/
 ├── backend/                  # API REST Django & moteur métier
 │   ├── apps/
 │   │   ├── accounts/         # Authentification unifiée, RBAC, profils, notifications
-│   │   ├── audit/            # Piste d'audit immuable, traçabilité des accès de santé
-│   │   ├── care_plan/        # Plans de soins, client Agent Hybride (DMI + Formulaire) & repli règles
-│   │   ├── fhir_bridge/      # Client HAPI FHIR R4 & tâches asynchrones Celery
-│   │   ├── nutritionist_queue/# File de tri des priorités pour les nutritionnistes
-│   │   ├── risk_engine/      # Moteur algorithmique de calcul du risque diabétique
-│   │   └── screening/        # Dépistage, patients, vues citoyen & tableau de bord ministère
-│   ├── scripts/              # Scripts d'initialisation (seed_demo.py)
+│   │   ├── audit/            # Piste d'audit immuable, traçabilité des accès
+│   │   ├── care_plan/        # Plans de soins, Agent Hybride LLM, tests de sécurité
+│   │   ├── fhir_bridge/      # Client HAPI FHIR R4, synchronisation & extraction DMI
+│   │   ├── nutritionist_queue/# File de tri des priorités nutritionnistes
+│   │   ├── risk_engine/      # ClientMoteurRisque, service ML & module ML intégré
+│   │   │   └── ml/           # Module Machine Learning & Protocol Engine
+│   │   │       ├── Nhanes_model.py     # Chargeur du modèle ML & featurizer
+│   │   │       ├── risk_engine.py      # FINDRISC, DIABSCORE, risque 10 ans, simulation
+│   │   │       ├── protocol_engine.py  # Moteur de règles déterministe & DMI
+│   │   │       ├── wq_adapter.py       # Adaptateur payload WiQayati <-> Formulaire ML
+│   │   │       ├── CHANGELOG.md        # Historique de versionnage du modèle
+│   │   │       └── model/              # Artefacts pkl & schema.json audité
+│   │   └── screening/        # Dépistage, ProfilPatient (INS), vues citoyen & ministère
+│   ├── scripts/              # Scripts d'initialisation (seed_demo.py, seed_fhir_dmi.py)
+│   ├── test_fhir_llm_dmi.py  # Test d'intégration de bout en bout FHIR -> DMI -> ML -> LLM
 │   ├── wiqayati/             # Configuration Django, Celery et WSGI/ASGI
 │   └── manage.py
 ├── frontend/                 # Application Web (React 19 + TypeScript + Vite)
 │   ├── src/
-│   │   ├── components/       # Barre de navigation, cartes, formulaires, modales
+│   │   ├── components/       # Composants d'interface, navigation, formulaires
 │   │   ├── context/          # Contexte d'authentification JWT (AuthContext)
-│   │   ├── pages/            # Portails : Agent, Nutritionniste, Ministère, IT, Citoyen
-│   │   └── services/         # Client HTTP Axios et appels d'API
+│   │   ├── pages/            # Portails : Agent (v2.0), Nutritionniste, Ministère, IT, Citoyen
+│   │   └── services/         # Client Axios & endpoints API
 │   └── vite.config.ts
 ├── mobile/                   # Application Mobile Citoyen (Expo + React Native)
 │   ├── src/
 │   │   ├── app/              # Routes Expo Router (dossier, plan, autoeval, alertes)
-│   │   ├── components/       # Interface responsive mobile et web
-│   │   └── services/         # Connexion simplifiée par INS + Code PIN
+│   │   ├── components/       # Interface responsive mobile et sélecteur de date
+│   │   └── services/         # Connexion simplifiée par INS + Code PIN ou CIN
 │   └── app.json
 ├── infra/                    # Infrastructure Docker
-│   ├── docker-compose.yml    # PostgreSQL, Redis, HAPI FHIR R4
-│   └── hapi-fhir/            # Configuration du serveur FHIR
-└── .github/workflows/        # Pipeline CI / CD (lint, tests, build)
+│   ├── docker-compose.yml    # PostgreSQL (x2), Redis, Serveur HAPI FHIR R4
+│   └── hapi-fhir/            # Configuration Spring Boot / application.yaml
+└── .github/workflows/        # Pipeline CI/CD (lint, tests Django, builds TypeScript)
 ```
 
 ---
 
 ## 🔑 Identifiants de Démonstration (Mock Data Credentials)
 
-La mire de connexion unifiée est disponible sur : **`http://localhost:5173/connexion`** (Web) ainsi que sur l'application mobile (Expo). Elle offre une **bifurcation claire** entre l'**Espace Citoyen** et l'**Accès Professionnel**.
-
----
+La mire de connexion unifiée est disponible sur : **`http://localhost:5173/connexion`** (Web) ainsi que sur l'application mobile (Expo).
 
 ### 1. 🧑‍⚕️ Profils Professionnels (Santé & Administration)
-
-Connectez-vous via l'onglet **« Accès Professionnel »** (ou utilisez les boutons de pré-remplissage en un clic au bas du formulaire) :
 
 | Rôle | URL / Portail | Identifiant | Mot de passe | Nom & Prénom | Structure / Affectation |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Super Administrateur** | `/django-admin/` | `superadmin` | `SuperAdmin2026!` | Super Admin | Administration système Django |
-| **Administrateur IT** | `/admin/it` | `admin.it` | `Admin2026!` | Sami Bouaziz | DSI Ministère Santé (Supervision & Audit) |
-| **Admin Ministère** | `/admin/ministere` | `admin.ministere` | `Admin2026!` | Dr. Houda Meddeb | Direction Santé Publique (Cartographie & KPIs) |
+| **Administrateur IT** | `/admin/it` | `admin.it` | `Admin2026!` | Sami Bouaziz | DSI Ministère Santé (Supervision & FHIR) |
+| **Admin Ministère** | `/admin/ministere` | `admin.ministere` | `Admin2026!` | Dr. Houda Meddeb | Direction Santé Publique (Cartographie) |
 | **Nutritionniste 1** | `/nutritionniste` | `nutri.ben_ali` | `Nutri2026!` | Sirine Ben Ali | Hôpital Charles Nicolle, Tunis |
 | **Nutritionniste 2** | `/nutritionniste` | `nutri.trabelsi` | `Nutri2026!` | Mohamed Trabelsi | CHU Hédi Chaker, Sfax |
 | **Nutritionniste 3** | `/nutritionniste` | `nutri.chaabane` | `Nutri2026!` | Leila Chaâbane | CSB Sahloul, Sousse |
 | **Agent Campagne** | `/agent` | `agent.campagne.sfax` | `Agent2026!` | Khaled Ferchichi | Unité Mobile Sfax (Dépistage terrain) |
-| **Agent Soins Primaires**| `/agent` | `agent.csp.tunis` | `Agent2026!` | Amina Gharbi | Centre de Soins Primaires Bab Souika, Tunis |
-| **Agent Soins Primaires**| `/agent` | `agent.csp.sousse` | `Agent2026!` | Yassine Saidani | Centre de Santé de Base Sousse Ville |
+| **Agent Soins Primaires**| `/agent` | `agent.csp.tunis` | `Agent2026!` | Amina Gharbi | CSP Bab Souika, Tunis |
+| **Agent Soins Primaires**| `/agent` | `agent.csp.sousse` | `Agent2026!` | Yassine Saidani | CSB Sousse Ville |
 
 ---
 
 ### 2. 🇹🇳 Profils Citoyens (Patients)
 
-Pour reproduire l'usage grand public réel en Tunisie, les citoyens s'identifient simplement avec leur **CIN (8 chiffres)** et leur **Date de Naissance** :
-1. **Sur le Web (`/connexion`)** : Onglet **« Espace Citoyen (CIN) »** → saisissez le CIN et la date de naissance (ou cliquez sur le bouton de démonstration *Mohamed Haddad*) → validation instantanée et restitution officielle de l'INS → accès au portail citoyen.
-2. **Sur Mobile (Expo)** : Onglet **« Par CIN & Date de naissance »** (ou **« Par INS & Code PIN »** pour les connexions récurrentes).
+Connexion par **CIN (8 chiffres)** et **Date de Naissance** (ou **INS + PIN**) :
 
-| Patient (Nom & Prénom) | N° CIN *(8 chiffres)* | Date de Naissance | Identifiant INS | Code PIN | Gouvernorat | Profil Clinique & Statut |
+| Patient (Nom & Prénom) | N° CIN | Date de Naissance | Identifiant INS | Code PIN | Gouvernorat | Statut & Profil |
 | :--- | :---: | :---: | :---: | :---: | :--- | :--- |
-| **Mohamed Haddad** *(Démo rapide)* | `08123456` | `15/03/1980` | `TUN10001980` | `1234` | Tunis | **Risque Élevé** (Plan validé, suivi nutritionnel actif) |
-| **Fatma Belhaj** | `09234567` | `22/07/1975` | `TUN10001975` | `1234` | Sfax | **Risque Élevé** (Plan validé, suivi glycémique renforcé) |
-| **Karim Mansouri** | `07345678` | `05/11/1968` | `TUN10001968` | `1234` | Sousse | **Risque Élevé** (En attente d'arbitrage nutritionniste) |
-| **Ines Zouari** | `11456789` | `30/01/1990` | `TUN10001990` | `1234` | Tunis | **Risque Intermédiaire** (Plan hygiéno-diététique validé) |
-| **Olfa Dridi** | `05567890` | `09/02/1985` | `TUN10001985` | `1234` | Nabeul | **Risque Faible** (Auto-évaluation périodique conseillée) |
-| **Nabil Ayari** | `08012345` | `14/06/1972` | `TUN10001972` | `1234` | Tunis | Patient dépisté en consultation CSP |
-| **Walid Ben Amor** | `07334455` | `02/04/1982` | `TUN10001982` | `1234` | Ben Arous | Patient suivi en soins primaires |
-| **Amel Bouzid** | `13223344` | `10/10/1995` | `TUN10001995` | `1234` | Ariana | Auto-évaluation citoyenne en ligne |
-
-> [!TIP]
-> Sur la mire web `/connexion`, cliquez simplement sur **« Pré-remplir avec un compte citoyen de démo (Mohamed Haddad) »** pour tester l'identification citoyenne en un clic sans saisie manuelle.
+| **Mohamed Haddad** *(Démo rapide)* | `08123456` | `15/03/1980` | `TUN10001980` | `1234` | Tunis | **Risque Élevé** (Plan validé, suivi actif) |
+| **Fatma Belhaj** | `09234567` | `22/07/1975` | `TUN10001975` | `1234` | Sfax | **Risque Élevé** (Suivi glycémique renforcé) |
+| **Karim Mansouri** | `07345678` | `05/11/1968` | `TUN10001968` | `1234` | Sousse | **Risque Élevé** (En attente nutritionniste) |
+| **Ines Zouari** | `11456789` | `30/01/1990` | `TUN10001990` | `1234` | Tunis | **Risque Intermédiaire** (Plan hygiéno-diététique) |
+| **Olfa Dridi** | `05567890` | `09/02/1985` | `TUN10001985` | `1234` | Nabeul | **Risque Faible** (Auto-évaluation conseillée) |
 
 ---
 
-## 🚀 Guide de Démarrage et d'Exécution
+## 🚀 Guide de Démarrage Rapide
 
 ### 1. Prérequis
-* **Python** : 3.10 ou supérieur
-* **Node.js** : 18.x ou 20.x et **npm** >= 9.x
-* **Docker & Docker Compose** (pour PostgreSQL, Redis et HAPI FHIR)
+* **Python** 3.10 ou supérieur
+* **Node.js** 18.x ou 20.x et **npm** >= 9.x
+* **Docker & Docker Compose** (PostgreSQL, Redis, HAPI FHIR)
 
 ---
 
-### 2. Démarrer l'Infrastructure (Base de données, Redis, FHIR)
-
-Depuis la racine du projet, lancez les services conteneurisés :
-
+### 2. Lancer l'Infrastructure Conteneurisée
+Depuis la racine du projet :
 ```bash
 docker compose -f infra/docker-compose.yml up -d db redis hapi-fhir-db hapi-fhir
 ```
-
-Services disponibles :
-* **PostgreSQL (Django)** : `localhost:5434`
-* **Redis (Broker Celery & Cache)** : `localhost:6379`
-* **Serveur HAPI FHIR R4** : `http://localhost:8085/fhir`
+Vérification des services :
+* **PostgreSQL (Wiqayati)** : `localhost:5434`
+* **Redis** : `localhost:6379`
+* **HAPI FHIR R4** : `http://localhost:8085/fhir/metadata` (HTTP 200 OK)
 
 ---
 
-### 3. Démarrer le Backend (Django)
+### 3. Démarrer le Backend Django
 
-1. Ouvrez un terminal dans le dossier `backend` :
+1. Ouvrez un terminal dans `backend` :
    ```bash
    cd backend
    ```
-
-2. Créez et activez un environnement virtuel :
-   * **Windows (PowerShell)** :
-     ```powershell
-     python -m venv .venv
-     .\.venv\Scripts\Activate.ps1
-     ```
-   * **Linux / macOS** :
-     ```bash
-     python3 -m venv .venv
-     source .venv/bin/activate
-     ```
-
-3. Installez les dépendances :
+2. Activez votre environnement virtuel et installez les dépendances :
    ```bash
    pip install -r requirements/base.txt -r requirements/development.txt
    ```
-
-4. Appliquez les migrations de la base de données :
+3. Exécutez les migrations :
    ```bash
    python manage.py migrate
    ```
-
-5. Initialisez toutes les données de démonstration :
+4. Peuplez les données de démonstration :
    ```bash
-   python scripts/seed_demo.py
-   # ou via la commande Django :
    python manage.py seed_demo_data
    ```
-
-6. Lancez le serveur de développement :
+5. *(Optionnel)* Testez l'interconnexion HAPI FHIR et l'agent hybride avec DMI réel :
+   ```bash
+   python test_fhir_llm_dmi.py
+   ```
+6. Lancez le serveur Django :
    ```bash
    python manage.py runserver 8000
    ```
 
-Le backend est accessible sur **`http://localhost:8000`** :
-* **Documentation OpenAPI / Swagger** : [`http://localhost:8000/api/docs/`](http://localhost:8000/api/docs/)
+Endpoints essentiels :
+* **API REST & Swagger** : [`http://localhost:8000/api/docs/`](http://localhost:8000/api/docs/)
 * **Administration Django** : [`http://localhost:8000/django-admin/`](http://localhost:8000/django-admin/)
+* **Portail Citoyen (Plan Actif)** : `GET /api/v1/citoyen/moi/plan-actif/`
 
-*(Optionnel)* Lancez le worker Celery pour la synchronisation FHIR asynchrone :
+---
+
+### 4. Démarrer le Frontend Web
+
+Dans un terminal dédié :
 ```bash
-celery -A wiqayati worker --loglevel=info
-```
-
----
-
-### 4. Démarrer le Frontend Web (Portail Professionnels & Citoyen)
-
-1. Dans un second terminal, placez-vous dans le dossier `frontend` :
-   ```bash
-   cd frontend
-   ```
-
-2. Installez les dépendances :
-   ```bash
-   npm install
-   ```
-
-3. Lancez le serveur de développement Vite :
-   ```bash
-   npm run dev
-   ```
-
-L'application web est accessible sur **`http://localhost:5173`**.
-
----
-
-### 5. Démarrer l'Application Mobile Citoyenne (Expo / React Native)
-
-1. Dans un troisième terminal, placez-vous dans le dossier `mobile` :
-   ```bash
-   cd mobile
-   ```
-
-2. Installez les dépendances :
-   ```bash
-   npm install
-   ```
-
-3. Lancez l'application avec Expo :
-   ```bash
-   npx expo start
-   ```
-   * Appuyez sur **`w`** pour ouvrir la version Web dans votre navigateur (`http://localhost:8081`).
-   * Scannez le QR Code avec l'application mobile **Expo Go** (Android / iOS) sur votre smartphone connecté au même réseau Wi-Fi.
-
----
-
-### 6. Lancement Global via Turborepo (Alternative monorepo)
-
-À la racine du projet, vous pouvez également utiliser les scripts configurés :
-
-```bash
-# Installer toutes les dépendances frontend et mobile
+cd frontend
 npm install
-
-# Lancer le frontend web
-npm run dev:frontend
-
-# Lancer l'application mobile
-npm run dev:mobile
+npm run dev
 ```
+Accessible sur : **`http://localhost:5173`**.
 
 ---
 
-## 🔄 Flux Clinique Complet (Scénario de Démonstration)
+### 5. Démarrer l'Application Mobile Citoyenne
 
-Pour tester la chaîne de bout en bout :
+Dans un terminal dédié :
+```bash
+cd mobile
+npm install
+npx expo start
+```
+* Appuyez sur **`w`** pour exécuter dans le navigateur web (`http://localhost:8081`).
+* Ou scannez le QR code avec **Expo Go** sur Android / iOS.
+
+---
+
+## 🔬 Détails des Composants Métier & IA
+
+### 1. Moteur Prédictif de Machine Learning (`apps.risk_engine.ml`)
+* **Cible** : Dysglycémie (HbA1c $\ge 5.7\%$ ou Glycémie à jeun $\ge 100\text{ mg/dL}$).
+* **Entraînement** : NHANES 2011-2020 (23 966 adultes américains sans diabète diagnostiqué).
+* **Variables d'entrée (10)** : `age`, `gender`, `bmi`, `waist_circumference`, `whtr`, `family_diabetes`, `hypertension`, `high_glucose_ever`, `physical_activity`, `diabscore`.
+* **Performances** : AUC = 0.737, calibration isotonique (Hosmer-Lemeshow $p=0.34$).
+* **Fichiers clés** :
+  - [`apps/risk_engine/ml/Nhanes_model.py`](backend/apps/risk_engine/ml/Nhanes_model.py) : Chargeur robuste du pipeline scikit-learn.
+  - [`apps/risk_engine/ml/wq_adapter.py`](backend/apps/risk_engine/ml/wq_adapter.py) : Traducteur bidirectionnel contrat WiQayati $\leftrightarrow$ Features ML.
+  - [`apps/risk_engine/client.py`](backend/apps/risk_engine/client.py) : Client de risque avec exécution multi-threadée (thread-safe, sans `os.chdir()`) et timeout de 12 secondes.
+
+### 2. Protocole Déterministe & Support DMI (`apps.risk_engine.ml.protocol_engine`)
+* Dérive un ensemble d'actions préventives fondées sur les preuves cliniques (Diabetes Prevention Program - DPP, ADA, OMS, étude tunisienne Gannar et al. 2018).
+* Consomme en entrée optionnelle le dictionnaire `dmi` :
+  - **Hypertension active (I10)** $\rightarrow$ Recommandation prioritaire de régime DASH et apport sodé $<5\text{ g/jour}$.
+  - **Allergies alimentaires documentées** $\rightarrow$ Évitement automatique dans les cibles diététiques.
+  - **Glycémie / HbA1c documentée** $\rightarrow$ Ajustement de l'urgence de consultation médicale.
+
+### 3. Agent Hybride LLM (`apps.care_plan.agent_hybride`)
+* **Design** : Le LLM intervient exclusivement pour reformuler en langage clair et bienveillant les champs textuels `action` et `target`.
+* **Règle de fusion** :
+  - Correspondance stricte par `trigger`.
+  - Copie sélective de `action` et `target`.
+  - Préservation intégrale de tous les autres champs (`priority`, `category`, `title`, `evidence`, `source`).
+  - Aucun item ne peut être ajouté ou retiré par le LLM.
+* **Garde-fous cliniques** : Ré-évaluation déterministe via `_apply_guardrails()` après fusion.
+* **Traçabilité** : Marquage explicite `"prose_source": "llm"` ou `"prose_source": "deterministic"`.
+
+### 4. Transparence Légale & Exposition Citoyenne
+* **Wellness Disclaimer** : Conforme au statut d'outil de prévention non médical, la réponse API et l'interface citoyenne intègrent le texte légal :
+  > *« Ce document est un support d'éducation à la santé. Il ne remplace pas un avis médical. Consultez un professionnel de santé pour toute décision concernant votre santé. »*
+  > *« هذا المستند هو دعم تثقيفي صحي ولا يحل محل الاستشارة الطبية. استشر أخصائي الرعاية الصحية لأي قرار. »*
+* **Risque à 10 ans & Simulation** :
+  - Restitution du score FINDRISC et du pourcentage de risque futur.
+  - Mention de la cohorte source : *« Cohorte finlandaise originale — non validée pour la Tunisie »*.
+  - Simulation dynamique montrant l'impact concret d'une perte de 7% de poids et d'une activité physique régulière.
+
+---
+
+## 🔄 Flux Clinique Complet
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor C as Citoyen (Patient)
     actor A as Agent de Terrain (CSP / Campagne)
-    participant B as Backend Wiqayati & Moteur Risque
-    participant DMI as Connecteur DMI / FHIR
-    participant H as Agent Hybride (API Soins)
+    participant B as Backend Django (Wiqayati)
+    participant F as Serveur HAPI FHIR R4
+    participant ML as Moteur Risque ML & Protocol Engine
+    participant LLM as Agent Hybride LLM
     actor N as Nutritionniste
-    participant F as Serveur HL7 HAPI FHIR
 
-    C->>A: Présentation avec INS (ex: TUN10001980)
-    A->>B: Saisie des constantes & réponses au questionnaire (14 vars)
-    B->>B: Calcul score FINDRISC & probabilité dysglycémie
-    B->>DMI: Extraction antécédents, traitements & biologie (INS)
-    DMI-->>B: Données cliniques DMI
-    B->>H: POST /agent/generer-plan/ (Formulaire + DMI)
-    Note over H: NLP contextualisé + Guardrails cliniques
-    H-->>B: Plan nutrition & activité personnalisé (Brouillon)
-    B->>N: Assignation tâche prioritaire STAT dans la file
-    B--)F: Synchronisation asynchrone FHIR (Patient, QuestionnaireResponse)
-    N->>B: Consultation justification IA, réajustement & validation
-    B->>C: Notification push / alerte "Plan de soin validé"
-    C->>B: Connexion citoyenne (CIN + Date de Naissance ou INS + PIN)
+    C->>A: Présentation avec CIN / INS
+    A->>B: Saisie formulaire v2.0 (Biométries, antécédents, mode de vie)
+    B->>F: Lecture DMI (Conditions, Observations, Allergies, Médicaments)
+    F-->>B: Contexte DMI structuré (dmi_disponible: true)
+    B->>ML: ClientMoteurRisque.evaluer() & generate_protocol()
+    ML-->>B: Évaluation risque (Score 0-100, FINDRISC, DIABSCORE, Protocole clinique)
+    B->>LLM: AgentHybridePlanSoin.generer_plan() (Reformulation contrôlée)
+    Note over LLM: Reformulation ciblée de l'action/cible + fusion stricte + guardrails
+    LLM-->>B: Plan de soin personnalisé (Statut: BROUILLON)
+    B->>N: Assignation tâche priorisée dans la file de triage (STAT / URGENT)
+    N->>B: Révision clinique, validation & signature du plan (Statut: VALIDE)
+    B--)F: Synchronisation asynchrone (QuestionnaireResponse, RiskAssessment, CarePlan)
+    C->>B: Connexion citoyenne (CIN + Date de naissance)
+    B-->>C: Restitution sécurisée (Plan validé, Disclaimer, Risque à 10 ans, Simulation)
+    Note over C: Données internes (rapport_agent, urgent_flags) strictement filtrées
 ```
-
-1. **Dépistage** : Connectez-vous en tant qu'agent (`agent.campagne.sfax` / `Agent2026!`) sur `http://localhost:5173/agent`.
-   * Recherchez un patient existant par CIN ou INS, ou créez un nouveau patient.
-   * Remplissez le formulaire de dépistage (âge, IMC, antécédents, glycémie, habitudes de vie).
-   * Soumettez : le score de risque est calculé instantanément.
-2. **Tri et Validation** : Connectez-vous en tant que nutritionniste (`nutri.ben_ali` / `Nutri2026!`) sur `http://localhost:5173/nutritionniste`.
-   * La file d'attente affiche le patient classé en priorité selon son niveau de risque.
-   * Ouvrez le dossier, modifiez les recommandations si nécessaire et validez le plan de soin.
-3. **Consultation Citoyenne** : Connectez-vous sur le portail Citoyen web ou mobile :
-   * **Via CIN + Date de Naissance** (ex : `08123456` / `15/03/1980`) pour récupérer son INS automatiquement.
-   * **Via INS + Code PIN** (ex : `TUN10001980` / `1234`).
-   * Visualisez le statut du dépistage, les conseils nutritionnels et d'activité physique validés.
-4. **Supervision Ministérielle** : Connectez-vous en tant que Ministère (`admin.ministere` / `Admin2026!`) sur `http://localhost:5173/admin/ministere`.
-   * Observez la répartition géographique et les prévalences de facteurs de risque.
 
 ---
 
 ## 🧪 Tests et Qualité de Code
 
-Le projet est vérifié automatiquement par un pipeline d'intégration continue GitHub Actions :
-
 ```bash
-# 1. Vérification Flake8 Backend (PEP 8, longueur max 120 caractères)
-python -m flake8 backend
+# 1. Vérification système Django
+python backend/manage.py check
 
-# 2. Exécution des tests unitaires Django
-python backend/manage.py test apps --settings=wiqayati.settings.development
+# 2. Suite complète de tests unitaires et d'intégration
+python backend/manage.py test apps.risk_engine apps.care_plan apps.screening
 
-# 3. Vérification des types TypeScript Frontend
+# 3. Vérification de typage et compilation Frontend
 npm run build --prefix frontend
 
-# 4. Vérification des types TypeScript Mobile
+# 4. Vérification typage TypeScript Mobile
 npx tsc --noEmit --project mobile
+
+# 5. Validation de la chaîne complète FHIR -> DMI -> ML -> LLM
+python backend/test_fhir_llm_dmi.py
 ```
 
 ---
 
 ## 📄 Licence
-
 Ce projet est développé dans le cadre de la modernisation des systèmes d'information de santé préventive en Tunisie. Tous droits réservés.
