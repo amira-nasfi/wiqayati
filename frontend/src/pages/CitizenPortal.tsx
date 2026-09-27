@@ -592,6 +592,82 @@ export const CitizenPortal: React.FC = () => {
                 <strong>Message de votre nutritionniste :</strong> {planActif.notes_nutritionniste}
               </div>
             )}
+
+            {/* Mon risque à 10 ans & Simulation */}
+            {planActif.future_risk && (
+              <div style={{
+                marginTop: '1.5rem',
+                padding: '1.25rem',
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
+                borderRadius: '12px',
+                border: '1.5px solid #bbf7d0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <Brain size={20} color="#059669" />
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#065f46' }}>
+                    Mon risque à 10 ans
+                  </h3>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'baseline', marginBottom: '0.6rem' }}>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f2c59' }}>
+                    Environ {planActif.future_risk.ten_year_risk_pct ?? '—'} % sur 10 ans
+                  </span>
+                  <span style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '8px',
+                    background: '#dcfce7',
+                    color: '#15803d',
+                    textTransform: 'uppercase'
+                  }}>
+                    Niveau : {planActif.future_risk.findrisc_band || 'Évalué'}
+                  </span>
+                </div>
+
+                {/* Caveat OBLIGATOIRE dès que le pourcentage est affiché */}
+                <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', marginBottom: '0.85rem' }}>
+                  Basé sur la cohorte finlandaise — estimation non calibrée pour la Tunisie.
+                </div>
+
+                {/* Simulation de prévention */}
+                {planActif.future_risk.simulation?.if_both && (
+                  <div style={{
+                    background: '#ffffff',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.85rem',
+                    color: '#1e293b',
+                    lineHeight: '1.5'
+                  }}>
+                    <strong style={{ color: '#0284c7' }}>Impact de vos efforts :</strong> Si vous perdez 7 % de votre poids et marchez 30 min/jour, votre risque descend à <strong>{planActif.future_risk.simulation.if_both.ten_year_risk_pct} %</strong> (baisse absolue de {planActif.future_risk.simulation.absolute_risk_drop_both ?? 0} points).
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Avertissement de bien-être / Disclaimer réglementaire obligatoire */}
+            {planActif.disclaimer && (
+              <div style={{
+                marginTop: '1.5rem',
+                padding: '0.85rem 1rem',
+                background: '#f8fafc',
+                borderLeft: '4px solid #94a3b8',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                color: '#64748b',
+                lineHeight: '1.5'
+              }}>
+                <p style={{ margin: 0 }}>{planActif.disclaimer.text}</p>
+                {planActif.disclaimer.text_ar && (
+                  <p style={{ margin: '0.35rem 0 0 0', direction: 'rtl', textAlign: 'right' }}>
+                    {planActif.disclaimer.text_ar}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#64748b' }}>

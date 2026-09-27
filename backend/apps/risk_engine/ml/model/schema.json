@@ -34,6 +34,13 @@
   "nns": 1.8,
   "hl_p": 0.021,
   "target": "dysglycemia (HbA1c>=5.7 or FPG>=100)",
-  "model": "L2 LogisticRegression (C=0.1) + isotonic calibration on val",
-  "note": "detects CURRENT prediabetes or undiagnosed T2D. Known diabetics are excluded at training time. For 10-year risk use risk_engine.py (FINDRISC)."
+  "note": "detects CURRENT prediabetes or undiagnosed T2D. Known diabetics are excluded at training time. For 10-year risk use risk_engine.py (FINDRISC).",
+  "audit": {
+    "verified_at": "2026-09-27T22:53:20Z",
+    "verified_by": "mayssa.cherif",
+    "n_training": 23966,
+    "n_features": 10,
+    "class_balance": 0.4646,
+    "notes": "5-fold pooled OOF AUC reported in the module README."
+  }
 }

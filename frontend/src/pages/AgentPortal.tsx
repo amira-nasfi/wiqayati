@@ -23,6 +23,10 @@ import {
   CreditCard,
   ShieldCheck,
   Lightbulb,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Pill,
 } from 'lucide-react';
 
 export const AgentPortal: React.FC = () => {
@@ -50,7 +54,7 @@ export const AgentPortal: React.FC = () => {
     telephone: '',
   });
 
-  // Formulaire de screening complet (paramètres du modèle ML et FINDRISC)
+  // Formulaire de screening complet (paramètres du modèle ML et FINDRISC v2.0)
   const [donneesScreening, setDonneesScreening] = useState({
     age: 45,
     genre: 'M',
@@ -58,10 +62,21 @@ export const AgentPortal: React.FC = () => {
     poids_kg: 76.5,
     imc: 26.5,
     tour_taille_cm: 88,
+    tour_hanche_cm: '',
     sbp: '',
     hypertension_diagnostiquee: false,
     prise_antihypertenseur: false,
     antecedents_familiaux_diabete: false,
+    antecedents_cardiovasculaires: false,
+    cholesterol_total_eleve: false,
+    hba1c_connue: false,
+    hba1c_valeur: '',
+    prise_medicaments_liste: '',
+    sommeil_heures: 7,
+    stress_chronique: 'FAIBLE',
+    alimentation_mediterraneenne: true,
+    consommation_sucres_caches: 'RAREMENT',
+    allergie_alimentaire: '',
     niveau_activite_physique: 'MODERE',
     qualite_alimentation: 'MOYENNE',
     statut_tabagisme: 'JAMAIS',
@@ -72,6 +87,8 @@ export const AgentPortal: React.FC = () => {
     acanthosis_nigricans: false,
     high_glucose_hist: false,
   });
+
+  const [sectionCliniqueAvancee, setSectionCliniqueAvancee] = useState(true);
 
   const [soumissionEnCours, setSoumissionEnCours] = useState(false);
   const [resultatImmediat, setResultatImmediat] = useState<any | null>(null);
@@ -178,7 +195,7 @@ export const AgentPortal: React.FC = () => {
     try {
       const payload = {
         ins_patient: patientActif.ins,
-        version_questionnaire: '1.0',
+        version_questionnaire: '2.0',
         donnees: {
           ...donneesScreening,
           age: Number(donneesScreening.age),
@@ -186,10 +203,22 @@ export const AgentPortal: React.FC = () => {
           poids_kg: Number(donneesScreening.poids_kg),
           imc: Number(donneesScreening.imc),
           tour_taille_cm: Number(donneesScreening.tour_taille_cm),
+          tour_hanche_cm: donneesScreening.tour_hanche_cm ? Number(donneesScreening.tour_hanche_cm) : null,
           sbp: donneesScreening.sbp ? Number(donneesScreening.sbp) : null,
+          pression_arterielle_systolique: donneesScreening.sbp ? Number(donneesScreening.sbp) : null,
           prise_antihypertenseur: Boolean(donneesScreening.prise_antihypertenseur),
           glycemie_jeun_mmol: donneesScreening.glycemie_jeun_mmol ? Number(donneesScreening.glycemie_jeun_mmol) : null,
           high_glucose_hist: Boolean(donneesScreening.high_glucose_hist),
+          antecedents_cardiovasculaires: Boolean(donneesScreening.antecedents_cardiovasculaires),
+          cholesterol_total_eleve: Boolean(donneesScreening.cholesterol_total_eleve),
+          hba1c_connue: Boolean(donneesScreening.hba1c_connue),
+          hba1c_valeur: donneesScreening.hba1c_valeur ? Number(donneesScreening.hba1c_valeur) : null,
+          prise_medicaments_liste: donneesScreening.prise_medicaments_liste.trim(),
+          sommeil_heures: Number(donneesScreening.sommeil_heures) || 7,
+          stress_chronique: donneesScreening.stress_chronique,
+          alimentation_mediterraneenne: Boolean(donneesScreening.alimentation_mediterraneenne),
+          consommation_sucres_caches: donneesScreening.consommation_sucres_caches,
+          allergie_alimentaire: donneesScreening.allergie_alimentaire.trim(),
         },
       };
 
@@ -584,6 +613,229 @@ export const AgentPortal: React.FC = () => {
                     ))}
                   </div>
 
+                  {/* Section Déroulante : Données Cliniques Complémentaires (v2.0) */}
+                  <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSectionCliniqueAvancee(!sectionCliniqueAvancee)}
+                      style={{
+                        width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '0.9rem 1.25rem', background: '#f8fafc', border: 'none', cursor: 'pointer',
+                        fontWeight: 700, color: '#0f2c59', fontSize: '0.95rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                        <Sparkles size={18} color="#2563eb" />
+                        <span>Données Cliniques Complémentaires &amp; Allergies (Formulaire v2.0)</span>
+                        <span style={{ fontSize: '0.72rem', background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>Optionnel</span>
+                      </div>
+                      {sectionCliniqueAvancee ? <ChevronUp size={18} color="#64748b" /> : <ChevronDown size={18} color="#64748b" />}
+                    </button>
+
+                    {sectionCliniqueAvancee && (
+                      <div style={{ padding: '1.25rem', background: '#fff', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        
+                        {/* 1. Biométrie étendue */}
+                        <div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.6rem' }}>
+                            1. Mesures biométriques complémentaires
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                            <div className="form-group">
+                              <label className="form-label">Tour de hanche (cm)</label>
+                              <input
+                                type="number" step="0.5" min="40" max="220" placeholder="ex: 98"
+                                className="form-control"
+                                value={donneesScreening.tour_hanche_cm}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, tour_hanche_cm: e.target.value })}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Ratio Taille/Hanche (WHR)</label>
+                              <div style={{ padding: '0.55rem 0.75rem', background: '#f1f5f9', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, color: '#334155' }}>
+                                {donneesScreening.tour_taille_cm && donneesScreening.tour_hanche_cm
+                                  ? (Number(donneesScreening.tour_taille_cm) / Number(donneesScreening.tour_hanche_cm)).toFixed(2)
+                                  : '—'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Bilan biologique déclaré */}
+                        <div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.6rem' }}>
+                            2. Bilan biologique déclaratif
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'center' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={donneesScreening.cholesterol_total_eleve}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, cholesterol_total_eleve: e.target.checked })}
+                              />
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>Cholestérol total élevé connu</span>
+                            </label>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={donneesScreening.hba1c_connue}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, hba1c_connue: e.target.checked })}
+                              />
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>HbA1c déjà dosée</span>
+                            </label>
+
+                            {donneesScreening.hba1c_connue && (
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Dernière valeur HbA1c (%)</label>
+                                <input
+                                  type="number" step="0.1" min="4" max="18" placeholder="ex: 6.2"
+                                  className="form-control"
+                                  value={donneesScreening.hba1c_valeur}
+                                  onChange={(e) => setDonneesScreening({ ...donneesScreening, hba1c_valeur: e.target.value })}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 3. Mode de vie & Santé cardiovasculaire */}
+                        <div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.6rem' }}>
+                            3. Mode de vie &amp; Antécédents métaboliques
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                            <div className="form-group">
+                              <label className="form-label">Sommeil moyen (h/nuit)</label>
+                              <input
+                                type="number" step="0.5" min="3" max="14"
+                                className="form-control"
+                                value={donneesScreening.sommeil_heures}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, sommeil_heures: Number(e.target.value) })}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Niveau de stress perçu</label>
+                              <select
+                                className="form-control"
+                                value={donneesScreening.stress_chronique}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, stress_chronique: e.target.value })}
+                              >
+                                <option value="FAIBLE">Faible</option>
+                                <option value="MODERE">Modéré</option>
+                                <option value="ELEVE">Élevé / Chronique</option>
+                              </select>
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Produits ultra-transformés / sucres cachés</label>
+                              <select
+                                className="form-control"
+                                value={donneesScreening.consommation_sucres_caches}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, consommation_sucres_caches: e.target.value })}
+                              >
+                                <option value="RAREMENT">Rarement</option>
+                                <option value="HEBDOMADAIRE">Hebdomadaire</option>
+                                <option value="QUOTIDIENNE">Quotidienne</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.85rem', marginBottom: '1rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={donneesScreening.alimentation_mediterraneenne}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, alimentation_mediterraneenne: e.target.checked })}
+                              />
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>Adhérence au régime méditerranéen tunisien</span>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={donneesScreening.antecedents_cardiovasculaires}
+                                onChange={(e) => setDonneesScreening({ ...donneesScreening, antecedents_cardiovasculaires: e.target.checked })}
+                              />
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>Antécédents cardiovasculaires personnels</span>
+                            </label>
+                          </div>
+
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">
+                              <Pill size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom' }} />
+                              Médicaments actuels (liste libre)
+                            </label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              placeholder="ex: Ramipril 5mg, Atorvastatine 20mg, Aspirine..."
+                              value={donneesScreening.prise_medicaments_liste}
+                              onChange={(e) => setDonneesScreening({ ...donneesScreening, prise_medicaments_liste: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* 4. Allergies et intolérances alimentaires */}
+                        <div style={{ padding: '1rem', background: '#fffbeb', borderRadius: '10px', border: '1px solid #fde68a' }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#92400e', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Salad size={16} color="#d97706" />
+                            <span>Allergies &amp; Intolérances Alimentaires</span>
+                          </div>
+                          <p style={{ fontSize: '0.8rem', color: '#b45309', margin: '0 0 0.75rem 0' }}>
+                            Les aliments spécifiés seront automatiquement exclus des recommandations du plan de soin par le garde-fou clinique.
+                          </p>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="ex: lactose, arachides, gluten..."
+                            value={donneesScreening.allergie_alimentaire}
+                            onChange={(e) => setDonneesScreening({ ...donneesScreening, allergie_alimentaire: e.target.value })}
+                            style={{ background: '#fff' }}
+                          />
+                          {/* Suggestions rapides */}
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+                            {['Gluten', 'Lactose', 'Arachides', 'Fruits à coque', 'Fruits de mer', 'Œufs', 'Soja'].map((allergene) => {
+                              const selected = donneesScreening.allergie_alimentaire.toLowerCase().includes(allergene.toLowerCase());
+                              return (
+                                <button
+                                  key={allergene}
+                                  type="button"
+                                  onClick={() => {
+                                    const current = donneesScreening.allergie_alimentaire.trim();
+                                    if (selected) {
+                                      const regex = new RegExp(`\\b${allergene}\\b,?\\s*`, 'gi');
+                                      setDonneesScreening({
+                                        ...donneesScreening,
+                                        allergie_alimentaire: current.replace(regex, '').replace(/,\s*$/, '')
+                                      });
+                                    } else {
+                                      setDonneesScreening({
+                                        ...donneesScreening,
+                                        allergie_alimentaire: current ? `${current}, ${allergene}` : allergene
+                                      });
+                                    }
+                                  }}
+                                  style={{
+                                    fontSize: '0.75rem',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    border: `1px solid ${selected ? '#d97706' : '#fcd34d'}`,
+                                    background: selected ? '#fef3c7' : '#fff',
+                                    color: selected ? '#92400e' : '#78350f',
+                                    cursor: 'pointer',
+                                    fontWeight: selected ? 700 : 500,
+                                  }}
+                                >
+                                  {selected ? `✓ ${allergene}` : `+ ${allergene}`}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                      </div>
+                    )}
+                  </div>
+
                   {erreurSoumission && <div style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem' }}>{erreurSoumission}</div>}
 
                   <button type="submit" className="btn btn-primary" disabled={soumissionEnCours} style={{ width: '100%', padding: '0.9rem', fontSize: '1.05rem', borderRadius: '12px' }}>
@@ -643,11 +895,33 @@ export const AgentPortal: React.FC = () => {
 
                 {resultatImmediat.ml_supplement && (
                   <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '16px', padding: '1.5rem', color: '#f8fafc', textAlign: 'left', marginBottom: '2rem', border: '1px solid #334155' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.2rem', flexWrap: 'wrap' }}>
                       <Brain size={22} color="#38bdf8" />
                       <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9' }}>Analyse IA &amp; Modèle Clinique</span>
-                      <span style={{ fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 600, marginLeft: 'auto' }}>ML &amp; FINDRISC</span>
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {resultatImmediat.ml_supplement.dmi_integre ? (
+                          <span style={{ fontSize: '0.75rem', background: 'rgba(52, 211, 153, 0.2)', color: '#34d399', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 700, border: '1px solid rgba(52, 211, 153, 0.4)' }}>
+                            ✓ DMI FHIR Intégré
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', background: 'rgba(148, 163, 184, 0.2)', color: '#94a3b8', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 600 }}>
+                            Formulaire seul
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: 600 }}>
+                          Agent Hybride
+                        </span>
+                      </div>
                     </div>
+                    {resultatImmediat.ml_supplement.urgent_flags?.length > 0 && (
+                      <div style={{ marginBottom: '1rem', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {resultatImmediat.ml_supplement.urgent_flags.map((uf: string, idx: number) => (
+                          <span key={idx} style={{ fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.25)', color: '#fca5a5', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.4)', fontWeight: 600 }}>
+                            ⚠ {uf.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                       {resultatImmediat.ml_supplement.risque_10_ans_pct != null && (
                         <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>

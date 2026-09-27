@@ -2,10 +2,12 @@ server:
   port: 8080
 
 spring:
+  main:
+    allow-circular-references: true
   datasource:
     url: jdbc:postgresql://hapi-fhir-db:5432/hapi_fhir
     username: hapi
-    password: hapi_password
+    password: hapi_password_2026
     driverClassName: org.postgresql.Driver
   jpa:
     properties:

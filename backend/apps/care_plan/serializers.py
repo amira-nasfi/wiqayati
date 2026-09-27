@@ -21,9 +21,15 @@ class PlanSoinDetailSerializer(serializers.ModelSerializer):
             'id', 'patient', 'evaluation_risque', 'reponse_screening',
             'plan_nutrition', 'plan_activite', 'notes_nutritionniste',
             'statut', 'statut_libelle', 'motif_rejet',
-            'genere_le', 'valide_le', 'valide_par', 'valide_par_nom'
+            'genere_le', 'valide_le', 'valide_par', 'valide_par_nom',
+            # Champs Hybrid Agent — exposés uniquement au nutritionniste
+            'rapport_agent', 'urgent_flags', 'requires_medical_referral',
         ]
-        read_only_fields = ['id', 'patient', 'evaluation_risque', 'genere_le', 'valide_le', 'valide_par']
+        read_only_fields = [
+            'id', 'patient', 'evaluation_risque', 'genere_le',
+            'valide_le', 'valide_par', 'rapport_agent',
+            'urgent_flags', 'requires_medical_referral',
+        ]
 
     def get_reponse_screening(self, obj):
         reponse = obj.evaluation_risque.reponse_screening

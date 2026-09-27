@@ -82,6 +82,29 @@ class PlanSoin(models.Model):
         null=True
     )
 
+    # Rapport complet de l'Agent Hybride (jamais exposé au citoyen)
+    rapport_agent = models.JSONField(
+        _('rapport complet agent hybride'),
+        default=dict,
+        blank=True,
+        help_text=_(
+            "Rapport IA complet : justification, contexte DMI, métadonnées. "
+            "Exposé uniquement aux nutritionnistes. Jamais transmis au citoyen."
+        )
+    )
+
+    # Drapeaux cliniques urgents et orientation médicale
+    urgent_flags = models.JSONField(
+        _('drapeaux cliniques urgents'),
+        default=list,
+        blank=True,
+    )
+    requires_medical_referral = models.BooleanField(
+        _('orientation médicale requise'),
+        default=False,
+        help_text=_("True si le protocole exige une consultation médicale.")
+    )
+
     class Meta:
         verbose_name = _('plan de soin')
         verbose_name_plural = _('plans de soins')

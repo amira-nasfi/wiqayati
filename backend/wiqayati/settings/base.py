@@ -184,6 +184,17 @@ CACHES = {
 
 # ─── FHIR ─────────────────────────────────────────────────────────────────────
 FHIR_SERVER_URL = config('FHIR_SERVER_URL', default='http://localhost:8085/fhir')
+FHIR_ENABLED = config('FHIR_ENABLED', default='true').lower() == 'true'
+
+# ─── Agent Hybride LLM ────────────────────────────────────────────────────────
+# AGENT_HYBRIDE_PROVIDER : gemini | openai | stub
+# stub = désactive le LLM et bascule immédiatement sur GenerateurPlanSoin (tests)
+AGENT_HYBRIDE_PROVIDER = config('AGENT_HYBRIDE_PROVIDER', default='stub')
+AGENT_HYBRIDE_MODEL = config('AGENT_HYBRIDE_MODEL', default='gemini-2.0-flash')
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+AGENT_HYBRIDE_MAX_TOKENS = int(config('AGENT_HYBRIDE_MAX_TOKENS', default='2048'))
+AGENT_HYBRIDE_TIMEOUT_S = int(config('AGENT_HYBRIDE_TIMEOUT_S', default='15'))
 
 # ─── Moteur de risque ─────────────────────────────────────────────────────────
 # "internal://ml"   → Moteur IA local in-process (FINDRISC + XGBoost NHANES) [recommandé]

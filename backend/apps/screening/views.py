@@ -22,6 +22,8 @@ from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
 from apps.risk_engine.services import ClientMoteurRisque, ServiceProtocoleML
 from apps.care_plan.models import PlanSoin, StatutPlan
 from apps.care_plan.services import GenerateurPlanSoin
+from apps.care_plan.agent_hybride import AgentHybridePlanSoin
+from apps.fhir_bridge.client import ClientHapiFhir
 from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache, StatutTache
 
 logger = logging.getLogger(__name__)
@@ -203,14 +205,30 @@ class SoumissionScreeningView(APIView):
             version_moteur=res_moteur.get("version_moteur", "stub-1.0")
         )
 
-        # 4. Génération du protocole ML (si disponible) pour enrichir le plan de soin
+        # 4. Lecture DMI FHIR (optionnelle, silencieuse si indisponible)
+        dmi = ClientHapiFhir.lire_dossier_patient(ins_patient)
+
+        # 5. Agent Hybride LLM (génération du plan personnalisé)
+        agent = AgentHybridePlanSoin(
+            assessment=res_moteur,
+            form=donnees,
+            dmi=dmi,
+        )
+        rapport_agent = agent.generer_plan()
+
+        nutrition = rapport_agent.get("plan_nutrition", {})
+        activite = rapport_agent.get("plan_activite", {})
+        rapport_nutritionniste = rapport_agent.get("rapport_nutritionniste", {})
+
+        # Protocole ML déterministe pour flags urgents et garde-fous
         protocole_ml = None
         payload_protocole = {
             "request_id": str(evaluation.id),
             "ins_patient": ins_patient,
-            "version_questionnaire": "1.0",
+            "version_questionnaire": version_questionnaire,
             "donnees_questionnaire": donnees,
-            "contexte": contexte
+            "contexte": contexte,
+            "dmi": dmi,
         }
         try:
             protocole_ml = ServiceProtocoleML.generer_protocole(payload_protocole)
@@ -222,21 +240,27 @@ class SoumissionScreeningView(APIView):
                     protocole_ml.get("requires_medical_referral", False)
                 )
         except Exception as exc:
-            logger.warning("Protocole ML non disponible, fallback statique: %s", exc)
+            logger.warning("Protocole ML non disponible: %s", exc)
 
-        # 5. Génération du plan de soin (statut BROUILLON)
-        nutrition, activite = GenerateurPlanSoin.generer_plans(
-            niveau_risqu=evaluation.niveau_risque,
-            facteurs=evaluation.facteurs,
-            protocole_ml=protocole_ml
+        urgent_flags = list(
+            protocole_ml.get("urgent_flags", []) if protocole_ml
+            else rapport_agent.get("metadata", {}).get("urgent_flags", [])
+        )
+        requires_referral = bool(
+            rapport_nutritionniste.get("requires_medical_referral")
+            or (protocole_ml and protocole_ml.get("requires_medical_referral"))
         )
 
+        # Sauvegarde du PlanSoin enrichi (statut BROUILLON)
         plan = PlanSoin.objects.create(
             patient=patient,
             evaluation_risque=evaluation,
             plan_nutrition=nutrition,
             plan_activite=activite,
-            statut=StatutPlan.BROUILLON
+            statut=StatutPlan.BROUILLON,
+            rapport_agent=rapport_agent,
+            requires_medical_referral=requires_referral,
+            urgent_flags=urgent_flags,
         )
 
         # 6. Création de la tâche nutritionniste ordonnancée
@@ -263,28 +287,34 @@ class SoumissionScreeningView(APIView):
             logger.warning("Notification Celery FHIR différée : %s", exc)
 
         # Réponse immédiate complète
-        # Construit le bloc ml_supplement depuis le résultat du moteur IA
         supplement = res_moteur.get("_supplement", {})
         ml_supplement = None
-        if supplement:
-            findrisc = supplement.get("findrisc", {})
-            diabscore = supplement.get("diabscore", {})
-            detecteur = supplement.get("detector", {})
-            referral = supplement.get("referral", {})
+        if supplement or protocole_ml:
+            findrisc = supplement.get("findrisc", {}) if supplement else {}
+            diabscore = supplement.get("diabscore", {}) if supplement else {}
+            detecteur = supplement.get("detector", {}) if supplement else {}
+            referral = supplement.get("referral", {}) if supplement else {}
+            p_ml = protocole_ml or {}
             ml_supplement = {
-                "findrisc_score": findrisc.get("score"),
-                "findrisc_band": findrisc.get("band"),
-                "risque_10_ans_pct": findrisc.get("ten_year_risk_pct"),
+                "findrisc_score": findrisc.get("score") if findrisc else p_ml.get("findrisc_score"),
+                "findrisc_band": findrisc.get("band") if findrisc else p_ml.get("findrisc_band"),
+                "risque_10_ans_pct": (
+                    findrisc.get("ten_year_risk_pct") if findrisc else p_ml.get("findrisc_10y_risk_pct")
+                ),
                 "diabscore": diabscore.get("score"),
                 "prediabete_flag": diabscore.get("prediabetes_flag"),
-                "probabilite_dysglycemie": detecteur.get("probability"),
-                "dysglycemie_detectee": detecteur.get("flagged"),
-                "statut_clinique": supplement.get("status"),
-                "orientation_medicale": referral,
-                "urgent_flags": protocole_ml.get("urgent_flags", []) if protocole_ml else [],
-                "requires_medical_referral": (
-                    protocole_ml.get("requires_medical_referral", False) if protocole_ml else False
+                "probabilite_dysglycemie": (
+                    detecteur.get("probability") if detecteur else p_ml.get("dysglycemia_ml_probability")
                 ),
+                "dysglycemie_detectee": (
+                    detecteur.get("flagged") if detecteur else p_ml.get("dysglycemia_flag", False)
+                ),
+                "statut_clinique": supplement.get("status") if supplement else None,
+                "orientation_medicale": referral or p_ml.get("medical_referral"),
+                "urgent_flags": urgent_flags,
+                "requires_medical_referral": requires_referral,
+                "agent_metadata": rapport_agent.get("metadata", {}),
+                "dmi_integre": rapport_agent.get("metadata", {}).get("dmi_utilise", False),
             }
 
         return Response({
@@ -312,8 +342,9 @@ class SoumissionScreeningView(APIView):
                 'plan_nutrition': plan.plan_nutrition,
                 'plan_activite': plan.plan_activite,
                 'notes_nutritionniste': plan.notes_nutritionniste,
-                'requires_medical_referral': bool(protocole_ml and protocole_ml.get('requires_medical_referral')),
-                'urgent_flags': protocole_ml.get('urgent_flags', []) if protocole_ml else [],
+                'requires_medical_referral': requires_referral,
+                'urgent_flags': urgent_flags,
+                'dmi_integre': rapport_agent.get("metadata", {}).get("dmi_utilise", False),
             },
             'plan_soin_id': str(plan.id),
             'statut_plan': plan.statut,

@@ -422,7 +422,7 @@ def assess(a: dict, nhanes_model=None) -> Dict[str, Any]:
         "band": band,
         "max_score": 26,
         "ten_year_risk_pct": findrisc_ten_year_risk(score),
-        "ten_year_risk_source": (...),
+        "ten_year_risk_source": "Lindström & Tuomilehto 2003 (Cohorte finlandaise — non validée pour la Tunisie)",
         "factors": sorted(
             [{"item": k, "points": v} for k, v in items.items()
              if v is not None and v > 0],

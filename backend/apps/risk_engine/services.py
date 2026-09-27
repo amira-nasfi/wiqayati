@@ -246,22 +246,14 @@ class ServiceMLMoteurRisque:
         les données enrichies (FINDRISC, DIABSCORE, probabilité détecteur ML).
         """
         try:
-            adapter = cls._load_adapter()
-            # Changer temporairement le CWD pour que les chemins relatifs model/ fonctionnent
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(_ML_DIR)
-                result = adapter.run_pipeline(payload)
-            finally:
-                os.chdir(original_cwd)
-
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+                from apps.risk_engine.ml import wq_adapter
+            result = wq_adapter.run_pipeline(payload)
             return cls._sanitize(result)
-
         except Exception as exc:
-            logger.exception(
-                "Erreur du moteur IA ML (wq-ml-1.0), basculement sur le stub: %s", exc
-            )
-            return None  # Signal de fallback pour ClientMoteurRisque
+            logger.exception("Erreur du moteur IA ML (wq-ml-1.0): %s", exc)
+            return None
 
 
 class ServiceProtocoleML:
@@ -277,82 +269,15 @@ class ServiceProtocoleML:
         nutritionnelles, urgences et critères d'orientation médicale.
         """
         try:
-            if _ML_DIR not in sys.path:
-                sys.path.insert(0, _ML_DIR)
-
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
-                import importlib
-                adapter = importlib.import_module("wq_adapter")
-
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(_ML_DIR)
-                result = adapter.generate_wiqayati_protocol(payload)
-            finally:
-                os.chdir(original_cwd)
-
-            return ServiceMLMoteurRisque._sanitize(result)
-
+                from apps.risk_engine.ml import wq_adapter
+            return ServiceMLMoteurRisque._sanitize(wq_adapter.generate_wiqayati_protocol(payload))
         except Exception as exc:
             logger.exception("Erreur génération protocole ML: %s", exc)
             return None
 
 
-class ClientMoteurRisque:
-    """
-    Client de haut niveau pour l'évaluation de risque.
-    Bascule de manière transparente entre les moteurs :
-      1. internal://ml   → Moteur IA ML local (recommandé)
-      2. internal://stub → Stub déterministe (fallback ou développement)
-      3. https://...     → Service distant
+# Re-export de ClientMoteurRisque vers apps.risk_engine.client
+from apps.risk_engine.client import ClientMoteurRisque
 
-    En cas d'échec du moteur ML ou du service distant, bascule
-    automatiquement et silencieusement sur le stub.
-    """
-
-    @classmethod
-    def evaluer(
-        cls, ins_patient: str, donnees_questionnaire: Dict[str, Any], contexte: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        request_id = str(uuid.uuid4())
-        payload = {
-            "request_id": request_id,
-            "ins_patient": ins_patient,
-            "version_questionnaire": "1.0",
-            "donnees_questionnaire": donnees_questionnaire,
-            "contexte": contexte
-        }
-
-        url = getattr(settings, 'RISK_ENGINE_URL', 'internal://ml')
-
-        # --- Mode ML local ---
-        if url == 'internal://ml':
-            result = ServiceMLMoteurRisque.evaluer(payload)
-            if result is not None:
-                logger.info(
-                    "Évaluation ML OK | ins=%s | score=%.1f | niveau=%s",
-                    ins_patient, result.get("score", 0), result.get("niveau_risque")
-                )
-                return result
-            # Fallback silencieux sur le stub
-            logger.warning("Basculement sur stub (moteur ML indisponible) pour ins=%s", ins_patient)
-            return ServiceStubMoteurRisque.evaluer(payload)
-
-        # --- Mode stub local ---
-        if not url or url == 'internal://stub':
-            return ServiceStubMoteurRisque.evaluer(payload)
-
-        # --- Mode service distant ---
-        try:
-            endpoint = url.rstrip('/') + '/risk-engine/evaluer'
-            response = requests.post(endpoint, json=payload, timeout=3.0)
-            if response.status_code == 200:
-                data = response.json()
-                return data
-            logger.error("Erreur HTTP %s depuis le moteur distant: %s", response.status_code, response.text)
-            # Repli de sécurité (failover) sur le stub déterministe
-            return ServiceStubMoteurRisque.evaluer(payload)
-        except Exception as exc:
-            logger.exception("Échec d'appel du moteur externe IA, repli sur le stub: %s", exc)
-            return ServiceStubMoteurRisque.evaluer(payload)

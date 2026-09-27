@@ -15,13 +15,13 @@ import pickle
 import numpy as np
 import pandas as pd
 
-MODEL_DIR = "model"
+_DEFAULT_MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model")
 
 
 class DetectionModel:
     """Loads model/model.pkl + model/schema.json. Disabled if either missing."""
 
-    def __init__(self, model_dir: str = MODEL_DIR):
+    def __init__(self, model_dir: str = _DEFAULT_MODEL_DIR):
         self.available = False
         self.reason = None
 
@@ -50,11 +50,15 @@ class DetectionModel:
     # -----------------------------------------------------------------
     @staticmethod
     def _featurize(a: dict) -> dict:
-        height_m = a["height_cm"] / 100.0
-        bmi = a["weight_kg"] / (height_m ** 2)
-
-        waist = a.get("waist_cm")
-        whtr = (waist / a["height_cm"]) if waist else None
+        h_cm = a.get("height_cm")
+        if h_cm:
+            height_m = h_cm / 100.0
+            bmi = a["weight_kg"] / (height_m ** 2) if a.get("weight_kg") else a.get("bmi")
+            waist = a.get("waist_cm")
+            whtr = (waist / h_cm) if waist else None
+        else:
+            bmi = a.get("bmi")
+            whtr = None
 
         # Family history: anything other than "none"/None counts as yes
         family_hx = 0 if a.get("family_history") in (None, "none") else 1

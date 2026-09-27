@@ -17,7 +17,9 @@ from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
 from apps.risk_engine.services import ClientMoteurRisque, ServiceProtocoleML
 from apps.care_plan.models import PlanSoin, StatutPlan
 from apps.care_plan.services import GenerateurPlanSoin
+from apps.care_plan.agent_hybride import AgentHybridePlanSoin
 from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache, StatutTache
+from apps.fhir_bridge.client import ClientHapiFhir
 from .questionnaire_definitions import DEFINITION_QUESTIONNAIRE_V1
 
 
@@ -266,6 +268,40 @@ class CitoyenPlanActifView(APIView):
                 'message': message,
             })
 
+        disclaimer = {
+            "text": (
+                "Ce document est un support d'éducation à la santé. "
+                "Il ne remplace pas un avis médical. Consultez un "
+                "professionnel de santé pour toute décision concernant votre santé."
+            ),
+            "text_ar": (
+                "هذا المستند هو دعم تثقيفي صحي ولا يحل محل "
+                "الاستشارة الطبية. استشر أخصائي الرعاية الصحية لأي قرار."
+            ),
+            "version": "1.0"
+        }
+
+        # Calcul du bloc future_risk à partir des données de l'évaluation
+        future_risk = None
+        eval_risque = plan_valide.evaluation_risque
+        if eval_risque and eval_risque.reponse_screening:
+            donnees_patient = eval_risque.reponse_screening.donnees
+            try:
+                from apps.risk_engine.ml import wq_adapter, risk_engine
+                form_intern = wq_adapter.wiqayati_to_our_form(donnees_patient)
+                assess_result = risk_engine.assess(form_intern)
+                fr = assess_result.get("future_risk", {})
+                sim = assess_result.get("simulation", {})
+                future_risk = {
+                    "findrisc_score": fr.get("score"),
+                    "findrisc_band": fr.get("band"),
+                    "ten_year_risk_pct": fr.get("ten_year_risk_pct"),
+                    "risk_source": "Cohorte finlandaise originale — non validée pour la Tunisie",
+                    "simulation": sim
+                }
+            except Exception as exc:
+                logger.warning("Erreur calcul future_risk citoyen: %s", exc)
+
         return Response({
             'a_un_plan_valide': True,
             'plan_id': str(plan_valide.id),
@@ -273,6 +309,8 @@ class CitoyenPlanActifView(APIView):
             'plan_activite': plan_valide.plan_activite,
             'notes_nutritionniste': plan_valide.notes_nutritionniste,
             'valide_le': plan_valide.valide_le.isoformat(),
+            'disclaimer': disclaimer,
+            'future_risk': future_risk,
         })
 
 
@@ -327,13 +365,29 @@ class CitoyenAutoEvaluationView(APIView):
             version_moteur=res_moteur.get("version_moteur", "stub-1.0")
         )
 
-        # Génération du protocole personnalisé via le moteur ML/règles
+        # ── Étape 3 : Lecture DMI FHIR (optionnelle, silencieuse si indisponible) ──
+        dmi = ClientHapiFhir.lire_dossier_patient(ins)
+
+        # ── Étape 4 : Agent Hybride LLM (génération du plan personnalisé) ─────────
+        agent = AgentHybridePlanSoin(
+            assessment=res_moteur,
+            form=donnees,
+            dmi=dmi,
+        )
+        rapport_agent = agent.generer_plan()
+
+        nutrition = rapport_agent.get("plan_nutrition", {})
+        activite = rapport_agent.get("plan_activite", {})
+        rapport_nutritionniste = rapport_agent.get("rapport_nutritionniste", {})
+
+        # Détermination du protocole ML (pour urgent_flags et referral)
+        # On interroge aussi ServiceProtocoleML pour les flags déterministes (guardrails)
         protocole_ml = ServiceProtocoleML.generer_protocole(donnees)
 
-        nutrition, activite = GenerateurPlanSoin.generer_plans(
-            niveau_risqu=evaluation.niveau_risque,
-            facteurs=evaluation.facteurs,
-            protocole_ml=protocole_ml,
+        urgent_flags = list(protocole_ml.get("urgent_flags", [])) if protocole_ml else []
+        requires_referral = bool(
+            rapport_nutritionniste.get("requires_medical_referral")
+            or (protocole_ml and protocole_ml.get("requires_medical_referral"))
         )
 
         plan = PlanSoin.objects.create(
@@ -342,8 +396,9 @@ class CitoyenAutoEvaluationView(APIView):
             plan_nutrition=nutrition,
             plan_activite=activite,
             statut=StatutPlan.BROUILLON,
-            requires_medical_referral=bool(protocole_ml and protocole_ml.get('requires_medical_referral')),
-            urgent_flags=protocole_ml.get('urgent_flags', []) if protocole_ml else [],
+            rapport_agent=rapport_agent,
+            requires_medical_referral=requires_referral,
+            urgent_flags=urgent_flags,
         )
 
         priorite_map = {
@@ -377,8 +432,11 @@ class CitoyenAutoEvaluationView(APIView):
                 detecteur.get("flagged") if detecteur else p_ml.get("dysglycemia_flag", False)
             ),
             "orientation_medicale": referral or p_ml.get("medical_referral"),
-            "requires_medical_referral": bool(p_ml.get("requires_medical_referral")),
-            "urgent_flags": p_ml.get("urgent_flags", []),
+            "requires_medical_referral": requires_referral,
+            "urgent_flags": urgent_flags,
+            # Métadonnées Agent Hybride
+            "agent_metadata": rapport_agent.get("metadata", {}),
+            "dmi_integre": rapport_agent.get("metadata", {}).get("dmi_utilise", False),
         }
 
         return Response({
@@ -401,7 +459,7 @@ class CitoyenAutoEvaluationView(APIView):
                 'plan_nutrition': plan.plan_nutrition,
                 'plan_activite': plan.plan_activite,
                 'notes_nutritionniste': plan.notes_nutritionniste,
-                'requires_medical_referral': bool(protocole_ml and protocole_ml.get("requires_medical_referral")),
-                'urgent_flags': protocole_ml.get("urgent_flags", []) if protocole_ml else [],
+                'requires_medical_referral': requires_referral,
+                'urgent_flags': urgent_flags,
             }
         }, status=status.HTTP_201_CREATED)

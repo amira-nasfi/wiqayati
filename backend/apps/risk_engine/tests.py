@@ -108,3 +108,117 @@ class TestMoteurRisqueML(TestCase):
         self.assertTrue(len(nutr["objectifs"]) > 0)
         self.assertTrue(len(activ["objectifs"]) > 0)
         self.assertEqual(nutr.get("source_moteur"), "wq-ml-1.0")
+
+
+class TestClientMoteurRisqueWiring(TestCase):
+    """
+    Tests unitaires pour ClientMoteurRisque câblé au module ML :
+      1. Évaluation normale renvoyant la structure de données correcte
+      2. Module ML forcé en échec -> lève ConnectionError (aucun fallback sur le stub)
+      3. ML_MODE=stub -> renvoie la réponse du stub
+      4. evaluer_avec_dmi avec FHIR indisponible -> poursuit sans DMI (_dmi_unavailable = True)
+    """
+
+    def setUp(self):
+        import os
+        from unittest.mock import patch, MagicMock
+
+        self.sample_payload = {
+            "request_id": "test-req-001",
+            "ins_patient": "TUN10001234",
+            "version_questionnaire": "1.0",
+            "donnees_questionnaire": {
+                "age": 47,
+                "genre": "M",
+                "imc": 31.0,
+                "tour_taille_cm": 101.0,
+                "antecedents_familiaux_diabete": True,
+                "hypertension_diagnostiquee": False,
+                "niveau_activite_physique": "FAIBLE",
+                "qualite_alimentation": "MAUVAISE",
+                "statut_tabagisme": "FUMEUR_ACTUEL",
+                "glycemie_jeun_connue": False,
+                "glycemie_jeun_mmol": None,
+                "diabete_gestationnel_antecedent": False,
+                "medicaments_corticoides": False,
+                "acanthosis_nigricans": False,
+                "taille_cm": 174.0,
+                "high_glucose_hist": False,
+            },
+            "contexte": {
+                "type_soumission": "AGENT",
+                "role_soumetteur": "AGENT_SOINS_PRIMAIRES",
+            },
+        }
+
+    def test_1_normal_evaluation_returns_correct_shape(self):
+        """Cas 1: L'évaluation normale retourne la structure attendue avec score, niveau_risque et _supplement."""
+        import os
+        from unittest.mock import patch
+        with patch.dict(os.environ, {"ML_MODE": ""}):
+            res = ClientMoteurRisque.evaluer(self.sample_payload)
+
+            self.assertIsInstance(res, dict)
+            self.assertIn("score", res)
+            self.assertIn("niveau_risque", res)
+            self.assertIn("facteurs", res)
+            self.assertIn("version_moteur", res)
+            self.assertIn("_supplement", res)
+
+            supp = res["_supplement"]
+            self.assertIn("findrisc", supp)
+            self.assertIn("score", supp["findrisc"])
+            self.assertIn("detector", supp)
+            self.assertIn("probability", supp["detector"])
+
+    def test_2_ml_failure_raises_connection_error_no_stub_fallback(self):
+        """Cas 2: Règle 1 - En cas d'erreur du module ML, ConnectionError est levée SANS fallback stub."""
+        import os
+        from unittest.mock import patch
+        with patch.dict(os.environ, {"ML_MODE": ""}):
+            with patch("apps.risk_engine.client._ml_adapter.run_pipeline", side_effect=RuntimeError("Panne ML simulée")):
+                with self.assertRaises(ConnectionError) as ctx:
+                    ClientMoteurRisque.evaluer(self.sample_payload)
+                self.assertIn("Échec de l'évaluation ML", str(ctx.exception))
+                self.assertIsInstance(ctx.exception.__cause__, RuntimeError)
+
+    def test_3_ml_mode_stub_returns_stub_response(self):
+        """Cas 3: Règle 1 - Le stub est utilisé UNIQUEMENT si ML_MODE=stub explicitement défini."""
+        import os
+        from unittest.mock import patch
+        with patch.dict(os.environ, {"ML_MODE": "stub"}):
+            res = ClientMoteurRisque.evaluer(self.sample_payload)
+
+            self.assertIsInstance(res, dict)
+            self.assertIn("score", res)
+            self.assertIn("niveau_risque", res)
+            self.assertEqual(res.get("version_moteur"), "stub-1.0")
+
+    def test_4_evaluer_avec_dmi_fhir_unavailable_proceeds_without_dmi(self):
+        """Cas 4: evaluer_avec_dmi avec FHIR indisponible procède sans bloquer et injecte _dmi_unavailable=True."""
+        import os
+        from unittest.mock import patch
+        with patch.dict(os.environ, {"ML_MODE": ""}):
+            with patch("apps.fhir_bridge.client.ClientHapiFhir.lire_dossier_patient", return_value={"dmi_disponible": False}):
+                payload = dict(self.sample_payload)
+                res = ClientMoteurRisque.evaluer_avec_dmi(payload, ins="TUN10001234")
+
+                self.assertIsInstance(res, dict)
+                self.assertIn("score", res)
+                self.assertTrue(payload.get("_dmi_unavailable", False))
+                self.assertNotIn("_dmi", payload)
+
+    def test_legacy_signature_compatibility(self):
+        """Vérifie la compatibilité ascendante avec l'ancienne signature à 3 arguments."""
+        import os
+        from unittest.mock import patch
+        with patch.dict(os.environ, {"ML_MODE": ""}):
+            res = ClientMoteurRisque.evaluer(
+                "TUN10001234",
+                self.sample_payload["donnees_questionnaire"],
+                self.sample_payload["contexte"]
+            )
+            self.assertIsInstance(res, dict)
+            self.assertIn("score", res)
+            self.assertIn("niveau_risque", res)
+

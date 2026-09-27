@@ -16,6 +16,9 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Sparkles,
+  Brain,
+  Pill,
 } from 'lucide-react';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -69,14 +72,18 @@ const DataItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, 
 // ─── Panneau Données Cliniques Complètes du Patient ─────────────────────────
 
 const PanneauDonneesCliniques: React.FC<{ plan: any }> = ({ plan }) => {
-  const [onglet, setOnglet] = useState<'biometrie' | 'metabolisme' | 'habitudes' | 'antecedents'>('biometrie');
+  const [onglet, setOnglet] = useState<'biometrie' | 'metabolisme' | 'habitudes' | 'antecedents' | 'allergies_dmi'>('biometrie');
   // L'API retourne les données de screening sous reponse_screening.donnees
   const d = plan.reponse_screening?.donnees || plan.screening_data || plan.evaluation_risque?.donnees || {};
   const patient = plan.patient;
+  const rapport = plan.rapport_agent || {};
+  const meta = rapport.metadata || {};
 
   const imcVal = d.imc ? parseFloat(d.imc) : null;
   const imcBadge = imcVal ? getBadgeIMC(imcVal) : null;
   const tourTaille = d.tour_taille_cm ? parseFloat(d.tour_taille_cm) : null;
+  const tourHanche = d.tour_hanche_cm ? parseFloat(d.tour_hanche_cm) : null;
+  const ratioWHR = tourTaille && tourHanche ? (tourTaille / tourHanche).toFixed(2) : null;
   const genrePatient = d.genre || patient?.genre || 'M';
   const risqueVisceral = tourTaille
     ? (genrePatient === 'M' && tourTaille > 102) || (genrePatient === 'F' && tourTaille > 88)
@@ -87,9 +94,10 @@ const PanneauDonneesCliniques: React.FC<{ plan: any }> = ({ plan }) => {
 
   const onglets = [
     { id: 'biometrie', label: 'Biométrie', icon: <Scale size={13} /> },
-    { id: 'metabolisme', label: 'Glycémie / DMI', icon: <FlaskConical size={13} /> },
+    { id: 'metabolisme', label: 'Glycémie / Bio', icon: <FlaskConical size={13} /> },
     { id: 'habitudes', label: 'Mode de vie', icon: <Activity size={13} /> },
     { id: 'antecedents', label: 'Antécédents', icon: <Dna size={13} /> },
+    { id: 'allergies_dmi', label: 'Allergies & DMI FHIR', icon: <Pill size={13} /> },
   ] as const;
 
   return (
@@ -144,7 +152,11 @@ const PanneauDonneesCliniques: React.FC<{ plan: any }> = ({ plan }) => {
                 </span>
               ) : '—'
             } />
-            {d.sbp && <DataItem label="Pression systolique" value={`${d.sbp} mmHg`} />}
+            {tourHanche && <DataItem label="Tour de hanche" value={`${tourHanche} cm`} />}
+            {ratioWHR && <DataItem label="Ratio Taille/Hanche" value={<span style={{ fontWeight: 700 }}>{ratioWHR}</span>} />}
+            {(d.sbp || d.pression_arterielle_systolique) && (
+              <DataItem label="Pression systolique" value={`${d.sbp || d.pression_arterielle_systolique} mmHg`} />
+            )}
             <DataItem label="Traitement antihypertenseur" value={<BoolBadge val={!!d.prise_antihypertenseur} />} />
           </div>
         )}
@@ -164,6 +176,15 @@ const PanneauDonneesCliniques: React.FC<{ plan: any }> = ({ plan }) => {
                 <DataItem label="Glycémie à jeun (g/L)" value={glycemieGL ? `${glycemieGL} g/L` : '—'} />
               </>
             )}
+            <DataItem label="HbA1c déjà dosée ?" value={<BoolBadge val={!!d.hba1c_connue} />} />
+            {d.hba1c_valeur && (
+              <DataItem label="Valeur HbA1c déclarée" value={
+                <span style={{ fontWeight: 700, color: Number(d.hba1c_valeur) >= 6.5 ? '#dc2626' : Number(d.hba1c_valeur) >= 5.7 ? '#d97706' : '#16a34a' }}>
+                  {d.hba1c_valeur} % {Number(d.hba1c_valeur) >= 6.5 ? '(Zone DT2)' : Number(d.hba1c_valeur) >= 5.7 ? '(Pré-diabète)' : '(Normal)'}
+                </span>
+              } />
+            )}
+            <DataItem label="Cholestérol total élevé" value={<BoolBadge val={!!d.cholesterol_total_eleve} />} />
             <DataItem label="Hyperglycémie antérieure" value={<BoolBadge val={!!d.high_glucose_hist} trueLabel="Antécédent documenté" falseLabel="Aucun" />} />
             <DataItem label="Acanthosis nigricans" value={<BoolBadge val={!!d.acanthosis_nigricans} trueLabel="Présent (insulinorésistance)" falseLabel="Absent" />} />
             <DataItem label="HTA diagnostiquée" value={<BoolBadge val={!!d.hypertension_diagnostiquee} />} />
@@ -191,21 +212,83 @@ const PanneauDonneesCliniques: React.FC<{ plan: any }> = ({ plan }) => {
                 {d.qualite_alimentation || '—'}
               </span>
             } />
+            <DataItem label="Régime méditerranéen tunisien" value={<BoolBadge val={!!d.alimentation_mediterraneenne} trueLabel="Adhérent" falseLabel="Non adhérent" />} />
+            <DataItem label="Produits ultra-transformés" value={d.consommation_sucres_caches || '—'} />
+            <DataItem label="Sommeil moyen" value={d.sommeil_heures ? `${d.sommeil_heures} h / nuit` : '—'} />
+            <DataItem label="Stress perçu" value={
+              <span style={{
+                padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700,
+                backgroundColor: d.stress_chronique === 'ELEVE' ? '#fee2e2' : d.stress_chronique === 'MODERE' ? '#fef3c7' : '#f0fdf4',
+                color: d.stress_chronique === 'ELEVE' ? '#991b1b' : d.stress_chronique === 'MODERE' ? '#92400e' : '#166534',
+              }}>
+                {d.stress_chronique || '—'}
+              </span>
+            } />
             <DataItem label="Statut tabagique" value={
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Cigarette size={13} color={d.statut_tabagisme === 'FUMEUR_ACTUEL' ? '#dc2626' : '#94a3b8'} />
                 <span>{d.statut_tabagisme?.replace('_', ' ') || '—'}</span>
               </span>
             } />
+            {d.prise_medicaments_liste && (
+              <DataItem label="Traitements déclarés" value={<span style={{ fontStyle: 'italic' }}>{d.prise_medicaments_liste}</span>} />
+            )}
           </div>
         )}
 
         {onglet === 'antecedents' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
             <DataItem label="Diabète familial (1er degré)" value={<BoolBadge val={!!d.antecedents_familiaux_diabete} trueLabel="Oui — Parents / Fratrie" falseLabel="Non" />} />
+            <DataItem label="ATCD cardiovasculaires" value={<BoolBadge val={!!d.antecedents_cardiovasculaires} trueLabel="Infarctus / AVC / Angor" falseLabel="Aucun" />} />
             <DataItem label="Diabète gestationnel" value={<BoolBadge val={!!d.diabete_gestationnel_antecedent} trueLabel="Antécédent documenté" falseLabel="Non / N.A." />} />
             <DataItem label="Gouvernorat patient" value={patient?.gouvernorat || '—'} />
             <DataItem label="Né(e) le" value={patient?.date_naissance || '—'} />
+          </div>
+        )}
+
+        {onglet === 'allergies_dmi' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {/* Allergies déclarées */}
+            <div style={{ padding: '0.65rem 0.85rem', background: '#fffbeb', borderRadius: '6px', border: '1px solid #fde68a' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400e', marginBottom: '0.3rem', textTransform: 'uppercase' }}>
+                Allergies &amp; Intolérances Alimentaires Déclarées
+              </div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: d.allergie_alimentaire ? '#78350f' : '#64748b' }}>
+                {d.allergie_alimentaire ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fef3c7', padding: '2px 8px', borderRadius: '4px', border: '1px solid #fcd34d' }}>
+                    ⚠ {d.allergie_alimentaire}
+                  </span>
+                ) : (
+                  'Aucune allergie alimentaire déclarée lors du dépistage.'
+                )}
+              </div>
+            </div>
+
+            {/* Statut DMI HAPI FHIR */}
+            <div style={{ padding: '0.65rem 0.85rem', background: meta.dmi_utilise ? '#ecfdf5' : '#f8fafc', borderRadius: '6px', border: `1px solid ${meta.dmi_utilise ? '#a7f3d0' : '#e2e8f0'}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: meta.dmi_utilise ? '#065f46' : '#475569', textTransform: 'uppercase' }}>
+                  Dossier Médical Informatisé (DMI) — Serveur HAPI FHIR
+                </span>
+                <span style={{
+                  fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: '10px',
+                  backgroundColor: meta.dmi_utilise ? '#d1fae5' : '#e2e8f0',
+                  color: meta.dmi_utilise ? '#047857' : '#64748b',
+                }}>
+                  {meta.dmi_utilise ? 'DMI Synchronisé' : 'Non disponible'}
+                </span>
+              </div>
+              {meta.dmi_fhir_id && (
+                <div style={{ fontSize: '0.78rem', color: '#047857', marginBottom: '0.3rem' }}>
+                  Identifiant Ressource Patient FHIR : <code>{meta.dmi_fhir_id}</code>
+                </div>
+              )}
+              {plan.rapport_agent?.rapport_nutritionniste?.resume_dossier && (
+                <div style={{ fontSize: '0.82rem', color: '#1f2937', marginTop: '0.3rem', fontStyle: 'italic' }}>
+                  « {plan.rapport_agent.rapport_nutritionniste.resume_dossier} »
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -520,6 +603,136 @@ export const NutritionistPortal: React.FC = () => {
               )}
             </div>
 
+            {/* ── Panneau Rapport de l'Agent Hybride IA ── */}
+            {planEnConsultation.rapport_agent && Object.keys(planEnConsultation.rapport_agent).length > 0 && (
+              <div className="card" style={{ border: '1px solid #bfdbfe', background: '#f8fafc', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <Brain size={20} color="#2563eb" />
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0f2c59' }}>
+                      Rapport Clinique &amp; Justification — Agent Hybride
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {planEnConsultation.rapport_agent.metadata?.dmi_utilise ? (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        padding: '3px 9px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 700,
+                        backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #86efac'
+                      }}>
+                        <Sparkles size={12} /> DMI FHIR Intégré
+                      </span>
+                    ) : (
+                      <span style={{
+                        padding: '3px 9px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 600,
+                        backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1'
+                      }}>
+                        Formulaire seul
+                      </span>
+                    )}
+                    <span style={{
+                      padding: '3px 9px', borderRadius: '12px', fontSize: '0.74rem', fontWeight: 600,
+                      backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe'
+                    }}>
+                      {planEnConsultation.rapport_agent.metadata?.llm_model || 'Modèle IA'}
+                    </span>
+                    {planEnConsultation.rapport_agent.metadata?.latence_ms > 0 && (
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                        {planEnConsultation.rapport_agent.metadata.latence_ms} ms
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bannière Alerte Clinique / Orientation Médicale */}
+                {(planEnConsultation.requires_medical_referral || (planEnConsultation.urgent_flags && planEnConsultation.urgent_flags.length > 0)) && (
+                  <div style={{
+                    marginBottom: '1rem', padding: '0.85rem 1rem',
+                    backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
+                    color: '#991b1b',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.3rem' }}>
+                      <AlertTriangle size={16} color="#dc2626" />
+                      <span>Orientation Médicale &amp; Drapeaux Cliniques Urgents</span>
+                    </div>
+                    {planEnConsultation.urgent_flags && planEnConsultation.urgent_flags.length > 0 && (
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '0.4rem 0' }}>
+                        {planEnConsultation.urgent_flags.map((uf: string, i: number) => (
+                          <span key={i} style={{
+                            padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700,
+                            backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5'
+                          }}>
+                            ⚠ {uf.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {planEnConsultation.rapport_agent.rapport_nutritionniste?.orientation_medicale?.motif && (
+                      <div style={{ fontSize: '0.82rem', marginTop: '0.2rem' }}>
+                        <strong>Motif :</strong> {planEnConsultation.rapport_agent.rapport_nutritionniste.orientation_medicale.motif}
+                        {planEnConsultation.rapport_agent.rapport_nutritionniste.orientation_medicale.specialite && (
+                          <span> · <em>Filière recommandée : {planEnConsultation.rapport_agent.rapport_nutritionniste.orientation_medicale.specialite}</em></span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Résumé du dossier clinique */}
+                {planEnConsultation.rapport_agent.rapport_nutritionniste?.resume_dossier && (
+                  <div style={{ marginBottom: '0.85rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem' }}>
+                      Synthèse Clinique Automatisée
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-ink)', lineHeight: 1.5, background: '#fff', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                      {planEnConsultation.rapport_agent.rapport_nutritionniste.resume_dossier}
+                    </div>
+                  </div>
+                )}
+
+                {/* Points d'attention identifiés par l'IA */}
+                {planEnConsultation.rapport_agent.rapport_nutritionniste?.points_attention?.length > 0 && (
+                  <div style={{ marginBottom: '0.85rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem' }}>
+                      Points d'Attention Identifiés par l'Agent
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.83rem', color: '#78350f', background: '#fffbeb', padding: '0.6rem 0.85rem 0.6rem 1.7rem', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                      {planEnConsultation.rapport_agent.rapport_nutritionniste.points_attention.map((pt: string, idx: number) => (
+                        <li key={idx} style={{ marginBottom: '2px' }}>{pt}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Justification clinique IA */}
+                {planEnConsultation.rapport_agent.rapport_nutritionniste?.justification_ia && (
+                  <div style={{ marginBottom: '0.85rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.25rem' }}>
+                      Justification Clinique du Plan Proposé
+                    </div>
+                    <div style={{ fontSize: '0.83rem', color: '#334155', fontStyle: 'italic', background: '#fff', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                      « {planEnConsultation.rapport_agent.rapport_nutritionniste.justification_ia} »
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactions Médicament-Aliment documentées */}
+                {planEnConsultation.rapport_agent.plan_nutrition?.interactions_medicaments_aliments?.length > 0 && (
+                  <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Pill size={13} color="#dc2626" />
+                      Interactions Médicament-Aliment Documentées
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.82rem', color: '#7f1d1d' }}>
+                      {planEnConsultation.rapport_agent.plan_nutrition.interactions_medicaments_aliments.map((inter: string, idx: number) => (
+                        <li key={idx}>{inter}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Plan de soin — vue ou édition */}
             <div className="card" style={{ border: '1px solid var(--border-medium)' }}>
               <div className="card-header" style={{ alignItems: 'center' }}>
@@ -560,16 +773,56 @@ export const NutritionistPortal: React.FC = () => {
                       </span>
                     </div>
                     {planEnConsultation.plan_nutrition?.objectifs?.length > 0 && (
-                      <ul style={{ paddingLeft: '1.1rem', fontSize: '0.83rem', color: 'var(--text-ink)', margin: 0 }}>
+                      <ul style={{ paddingLeft: '1.1rem', fontSize: '0.83rem', color: 'var(--text-ink)', margin: '0 0 0.5rem 0' }}>
                         {planEnConsultation.plan_nutrition.objectifs.map((obj: string, i: number) => (
                           <li key={i} style={{ marginBottom: '3px' }}>{obj}</li>
                         ))}
                       </ul>
                     )}
+
+                    {/* Aliments à privilégier et à éviter */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem', marginBottom: '0.5rem' }}>
+                      {planEnConsultation.plan_nutrition?.aliments_a_privilegier?.length > 0 && (
+                        <div style={{ background: '#f0fdf4', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                          <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#166534', marginBottom: '0.3rem', textTransform: 'uppercase' }}>
+                            ✓ Aliments à privilégier
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {planEnConsultation.plan_nutrition.aliments_a_privilegier.map((a: string, i: number) => (
+                              <span key={i} style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#14532d', padding: '2px 6px', borderRadius: '4px', border: '1px solid #86efac' }}>
+                                {a}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {planEnConsultation.plan_nutrition?.aliments_a_eviter?.length > 0 && (
+                        <div style={{ background: '#fef2f2', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #fecaca' }}>
+                          <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#991b1b', marginBottom: '0.3rem', textTransform: 'uppercase' }}>
+                            ✗ Aliments à éviter / modérer
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {planEnConsultation.plan_nutrition.aliments_a_eviter.map((a: string, i: number) => (
+                              <span key={i} style={{ fontSize: '0.72rem', background: '#fee2e2', color: '#7f1d1d', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fca5a5' }}>
+                                {a}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {planEnConsultation.plan_nutrition?.conseils_specifiques && (
                       <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '0.5rem', fontStyle: 'italic', margin: '0.5rem 0 0' }}>
                         {planEnConsultation.plan_nutrition.conseils_specifiques}
                       </p>
+                    )}
+
+                    {planEnConsultation.plan_nutrition?.frequence_suivi && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#0369a1', fontWeight: 600 }}>
+                        Suivi nutritionnel recommandé : {planEnConsultation.plan_nutrition.frequence_suivi}
+                      </div>
                     )}
                   </div>
 
@@ -582,11 +835,21 @@ export const NutritionistPortal: React.FC = () => {
                       </span>
                     </div>
                     {planEnConsultation.plan_activite?.objectifs?.length > 0 && (
-                      <ul style={{ paddingLeft: '1.1rem', fontSize: '0.83rem', color: 'var(--text-ink)', margin: 0 }}>
+                      <ul style={{ paddingLeft: '1.1rem', fontSize: '0.83rem', color: 'var(--text-ink)', margin: '0 0 0.5rem 0' }}>
                         {planEnConsultation.plan_activite.objectifs.map((obj: string, i: number) => (
                           <li key={i} style={{ marginBottom: '3px' }}>{obj}</li>
                         ))}
                       </ul>
+                    )}
+                    {planEnConsultation.plan_activite?.programme_semaine && (
+                      <div style={{ fontSize: '0.82rem', color: '#1e40af', background: '#eff6ff', padding: '0.5rem 0.75rem', borderRadius: '4px', marginBottom: '0.5rem' }}>
+                        <strong>Programme :</strong> {planEnConsultation.plan_activite.programme_semaine}
+                      </div>
+                    )}
+                    {planEnConsultation.plan_activite?.precautions && (
+                      <div style={{ fontSize: '0.8rem', color: '#92400e', background: '#fef3c7', padding: '0.4rem 0.6rem', borderRadius: '4px' }}>
+                        <strong>Précautions :</strong> {planEnConsultation.plan_activite.precautions}
+                      </div>
                     )}
                     {planEnConsultation.plan_activite?.contre_indications_dmi?.length > 0 && (
                       <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', backgroundColor: '#fff5f5', borderRadius: '4px', border: '1px solid #fed7d7' }}>
@@ -647,8 +910,8 @@ export const NutritionistPortal: React.FC = () => {
               )}
 
               {/* Actions soignantes */}
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
-                {modeEdition && (
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
+                {modeEdition ? (
                   <>
                     <button type="button" onClick={() => setModeEdition(false)} className="btn btn-secondary" disabled={sauvegardeEnCours}>
                       Annuler l'édition
@@ -657,12 +920,23 @@ export const NutritionistPortal: React.FC = () => {
                       <FileEdit size={15} />
                       <span>Enregistrer brouillon</span>
                     </button>
+                    <button type="button" onClick={handleValiderPlan} className="btn btn-accent" disabled={sauvegardeEnCours}>
+                      {sauvegardeEnCours ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
+                      <span>Valider avec mes modifications</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => setModeEdition(true)} className="btn btn-secondary">
+                      <FileEdit size={15} />
+                      <span>Modifier le plan</span>
+                    </button>
+                    <button type="button" onClick={handleValiderPlan} className="btn btn-accent" disabled={sauvegardeEnCours}>
+                      {sauvegardeEnCours ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
+                      <span>Valider tel quel (Certifier IA)</span>
+                    </button>
                   </>
                 )}
-                <button type="button" onClick={handleValiderPlan} className="btn btn-accent" disabled={sauvegardeEnCours}>
-                  {sauvegardeEnCours ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
-                  <span>Valider et transmettre au citoyen</span>
-                </button>
               </div>
             </div>
 

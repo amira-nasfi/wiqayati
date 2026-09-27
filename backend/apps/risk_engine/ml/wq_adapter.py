@@ -23,9 +23,13 @@ Notes:
     formula. Clinical review of the weights is pending.
 """
 import sys
+import logging
 from pathlib import Path
 from datetime import datetime, timezone
 import uuid
+from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 _THIS_DIR = str(Path(__file__).resolve().parent)
 if _THIS_DIR not in sys.path:
@@ -61,16 +65,22 @@ def wiqayati_to_our_form(payload: dict) -> dict:
         sex = "F"  # assume female by default; treated downstream as non-male
 
     height_cm = None
-    if q.get("taille_cm"):
+    if q.get("taille_cm") is not None:
         try:
-            height_cm = float(q.get("taille_cm"))
+            val_taille = q.get("taille_cm")
+            height_cm = float(val_taille) if val_taille is not None else None
         except (TypeError, ValueError):
             height_cm = None
+    else:
+        logger.warning(
+            "Payload v1.0 sans taille_cm détecté : fallback height_cm=None (DIABSCORE None, WHtR non calculé)"
+        )
 
     weight_kg = None
-    if q.get("poids_kg"):
+    if q.get("poids_kg") is not None:
         try:
-            weight_kg = float(q.get("poids_kg"))
+            val_poids = q.get("poids_kg")
+            weight_kg = float(val_poids) if val_poids is not None else None
         except (TypeError, ValueError):
             weight_kg = None
 
@@ -81,15 +91,21 @@ def wiqayati_to_our_form(payload: dict) -> dict:
         except ZeroDivisionError:
             imc = 22.0
 
-    if height_cm is None:
-        height_cm = 170.0  # Valeur par défaut de référence
-    if weight_kg is None and imc:
+    if weight_kg is None and imc and height_cm:
         try:
             weight_kg = round(float(imc) * (float(height_cm) / 100.0) ** 2, 1)
         except (TypeError, ValueError):
             weight_kg = 70.0
+    elif weight_kg is None:
+        weight_kg = 70.0
 
-    waist_cm = q.get("tour_taille_cm")
+    waist_cm = None
+    if q.get("tour_taille_cm") is not None:
+        try:
+            val_waist = q.get("tour_taille_cm")
+            waist_cm = float(val_waist) if val_waist is not None else None
+        except (TypeError, ValueError):
+            waist_cm = None
 
     # Glucose: only usable if fasting AND value provided.
     glucose_mgdl = None
@@ -107,7 +123,8 @@ def wiqayati_to_our_form(payload: dict) -> dict:
     sbp = None
     if q.get("sbp"):
         try:
-            sbp = float(q.get("sbp"))
+            val_sbp = q.get("sbp")
+            sbp = float(val_sbp) if val_sbp is not None else None
         except (TypeError, ValueError):
             sbp = None
 
@@ -116,6 +133,13 @@ def wiqayati_to_our_form(payload: dict) -> dict:
         if "prise_antihypertenseur" in q
         else bool(q.get("hypertension_diagnostiquee"))
     )
+
+    high_glucose_ever = False
+    if "high_glucose_hist" in q:
+        high_glucose_ever = bool(q.get("high_glucose_hist"))
+    else:
+        logger.warning("Payload v1.0 sans high_glucose_hist détecté : fallback False")
+        high_glucose_ever = False
 
     return {
         "age": age,
@@ -136,7 +160,7 @@ def wiqayati_to_our_form(payload: dict) -> dict:
             "BONNE", "EXCELLENTE", "EQUILIBREE", "QUOTIDIENNE", "OUI", True
         ),
         "bp_medication": bp_meds,
-        "high_glucose_ever": bool(q.get("high_glucose_hist", False)),
+        "high_glucose_ever": high_glucose_ever,
         "family_history": family,
 
         # Detector items
@@ -173,7 +197,7 @@ BAND_MAP = {
 }
 
 
-def _score_100(assessment: dict) -> float:
+def _score_100(assessment: dict[str, Any]) -> float:
     """
     Blend our three engines into WiQayati's 0-100 scale.
 
@@ -184,9 +208,12 @@ def _score_100(assessment: dict) -> float:
 
     Result is clamped to [0, 100].
     """
-    fr = assessment.get("future_risk", {})
-    ds = assessment.get("diabscore", {})
-    det = assessment.get("detect_now", {})
+    raw_fr = assessment.get("future_risk")
+    fr: dict[str, Any] = raw_fr if isinstance(raw_fr, dict) else {}
+    raw_ds = assessment.get("diabscore")
+    ds: dict[str, Any] = raw_ds if isinstance(raw_ds, dict) else {}
+    raw_det = assessment.get("detect_now")
+    det: dict[str, Any] = raw_det if isinstance(raw_det, dict) else {}
 
     # FINDRISC: 0-26 -> 0-50
     findrisc_pts = float(fr.get("score") or 0) * (50.0 / 26.0)
@@ -202,6 +229,11 @@ def _score_100(assessment: dict) -> float:
     det_pts = 25.0 * float(det.get("probability") or 0.0)
 
     total = findrisc_pts + ds_pts + det_pts
+    # When DIABSCORE is unavailable (e.g. v1.0 payload without taille_cm),
+    # renormalize the available 75 points to a 0-100 scale.
+    if ds.get("score") is None:
+        total = total * (100.0 / 75.0)
+
     return round(min(max(total, 0.0), 100.0), 1)
 
 
@@ -225,13 +257,14 @@ def _facteur(cle, libelle, poids, valeur, seuil, direction):
     }
 
 
-def _build_facteurs(assessment: dict, form: dict) -> list:
+def _build_facteurs(assessment: dict[str, Any], form: dict[str, Any]) -> list:
     """
     Translate our FINDRISC factor breakdown into WiQayati's facteurs list.
     Capped at 5 entries, sorted by weight desc, matching the contract's
     example shape.
     """
-    fr = assessment.get("future_risk", {})
+    raw_fr = assessment.get("future_risk")
+    fr: dict[str, Any] = raw_fr if isinstance(raw_fr, dict) else {}
     factors = fr.get("factors_all") or fr.get("factors") or []
 
     # Weight for each FINDRISC factor, expressed as a fraction of max 26.
@@ -285,11 +318,11 @@ def _build_facteurs(assessment: dict, form: dict) -> list:
 
 
 def our_assessment_to_wiqayati(
-    assessment: dict,
-    form: dict,
-    request_id: str = None,
+    assessment: dict[str, Any],
+    form: dict[str, Any],
+    request_id: Optional[str] = None,
     include_supplement: bool = True
-) -> dict:
+) -> dict[str, Any]:
     """
     Take our assess() output and format it as the WiQayati response contract.
 
@@ -301,7 +334,7 @@ def our_assessment_to_wiqayati(
     band = _band_from_score(score)
     facteurs = _build_facteurs(assessment, form)
 
-    response = {
+    response: dict[str, Any] = {
         "request_id": request_id or str(uuid.uuid4()),
         "niveau_risque": band,
         "score": score,
@@ -311,15 +344,22 @@ def our_assessment_to_wiqayati(
     }
 
     if include_supplement:
-        fr = assessment.get("future_risk", {})
-        ds = assessment.get("diabscore", {})
-        det = assessment.get("detect_now", {})
+        raw_fr = assessment.get("future_risk")
+        fr: dict[str, Any] = raw_fr if isinstance(raw_fr, dict) else {}
+        raw_ds = assessment.get("diabscore")
+        ds: dict[str, Any] = raw_ds if isinstance(raw_ds, dict) else {}
+        raw_det = assessment.get("detect_now")
+        det: dict[str, Any] = raw_det if isinstance(raw_det, dict) else {}
+        ten_year_src = fr.get("ten_year_risk_source")
+        if not ten_year_src or ten_year_src is ...:
+            ten_year_src = "Cohorte finlandaise originale — non validée pour la Tunisie"
+
         response["_supplement"] = {
             "findrisc": {
                 "score": fr.get("score"),
                 "band": fr.get("band"),
                 "ten_year_risk_pct": fr.get("ten_year_risk_pct"),
-                "ten_year_risk_source": fr.get("ten_year_risk_source"),
+                "ten_year_risk_source": str(ten_year_src),
             },
             "diabscore": {
                 "score": ds.get("score"),
@@ -342,17 +382,21 @@ def our_assessment_to_wiqayati(
 # CONVENIENCE - full pipeline in one call
 # ===========================================================================
 
-def run_pipeline(full_payload: dict) -> dict:
+def run_pipeline(full_payload: dict[str, Any]) -> dict[str, Any]:
     """
     Take the FULL WiQayati envelope (request_id + donnees_questionnaire +
     contexte) and return the WiQayati response contract.
 
     This is what Django calls. One import, one function.
     """
-    from risk_engine import assess  # local import - keeps the module lightweight
+    try:
+        from apps.risk_engine.ml.risk_engine import assess
+    except ImportError:
+        from risk_engine import assess
 
     inner = full_payload.get("donnees_questionnaire") or full_payload
-    request_id = full_payload.get("request_id")
+    req_id = full_payload.get("request_id")
+    request_id: Optional[str] = str(req_id) if req_id is not None else None
 
     form = wiqayati_to_our_form(inner)
     assessment = assess(form)
@@ -372,13 +416,18 @@ def generate_wiqayati_protocol(full_payload: dict) -> dict:
     Output shape is our internal protocol format. Django's apps.care_plan
     can pick items out of `items` and store them as CarePlan.activity entries.
     """
-    from risk_engine import assess
-    from protocol_engine import generate_protocol
+    try:
+        from apps.risk_engine.ml.risk_engine import assess
+        from apps.risk_engine.ml.protocol_engine import generate_protocol
+    except ImportError:
+        from risk_engine import assess
+        from protocol_engine import generate_protocol
 
     inner = full_payload.get("donnees_questionnaire") or full_payload
+    dmi = full_payload.get("dmi")
     form = wiqayati_to_our_form(inner)
     assessment = assess(form)
-    protocol = generate_protocol(assessment, form, language="fr")
+    protocol = generate_protocol(assessment, form, dmi=dmi, language="fr")
 
     return {
         "protocol_id": protocol.get("protocol_id", "draft"),
@@ -390,6 +439,9 @@ def generate_wiqayati_protocol(full_payload: dict) -> dict:
         "urgent_flags": protocol.get("urgent_flags", []),
         "requires_medical_referral": protocol.get("requires_medical_referral", False),
         "patient_summary": protocol.get("patient_summary", {}),
+        "dmi_integrated": protocol.get("dmi_integrated", False),
+        "dmi_source": protocol.get("dmi_source"),
+        "dmi_summary": protocol.get("dmi_summary", ""),
     }
 
 
@@ -400,8 +452,9 @@ def generate_wiqayati_protocol(full_payload: dict) -> dict:
 def health() -> dict:
     """One-line status for Django's failover logic."""
     import os
-    schema_path = os.path.join("model", "schema.json")
-    model_path = os.path.join("model", "model.pkl")
+    here = os.path.dirname(os.path.abspath(__file__))
+    schema_path = os.path.join(here, "model", "schema.json")
+    model_path = os.path.join(here, "model", "model.pkl")
     return {
         "service": "wq_risk_adapter",
         "version": "1.0",
@@ -449,11 +502,11 @@ if __name__ == "__main__":
     }
 
     print("=== /evaluate equivalent ===")
-    print(json.dumps(run_pipeline(sample), indent=2, ensure_ascii=False))
+    print(json.dumps(run_pipeline(sample), indent=2))
 
     print("\n=== /protocol equivalent ===")
     proto = generate_wiqayati_protocol(sample)
-    print(json.dumps(proto, indent=2, ensure_ascii=False))
+    print(json.dumps(proto, indent=2))
 
     print("\n=== health ===")
     print(json.dumps(health(), indent=2))
