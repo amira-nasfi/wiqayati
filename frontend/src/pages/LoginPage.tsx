@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  HeartPulse,
   User,
   Lock,
   AlertCircle,
@@ -12,6 +11,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import wiqayatiLogo from '../assets/logo.png';
 
 export const LoginPage: React.FC = () => {
   const [identifiant, setIdentifiant] = useState('');
@@ -85,19 +85,17 @@ export const LoginPage: React.FC = () => {
           }}
         />
 
-        {/* En-tête avec bouton retour vers l'accueil */}
+        {/* En-tête avec bouton retour vers l'accueil (intégré au background) */}
         <header
           style={{
             position: 'relative',
             zIndex: 10,
-            padding: '1rem 3.5rem',
+            padding: '1.2rem 3.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: 'rgba(255, 255, 255, 0.92)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            borderBottom: '1px solid rgba(19, 75, 101, 0.08)',
+            backgroundColor: 'transparent',
+            borderBottom: 'none',
           }}
         >
           <Link
@@ -106,25 +104,27 @@ export const LoginPage: React.FC = () => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.45rem',
-              color: '#34576B',
+              color: '#134B65',
               textDecoration: 'none',
               fontSize: '0.9rem',
               fontWeight: 600,
-              padding: '0.4rem 0.85rem',
-              borderRadius: '7px',
-              border: '1px solid rgba(19, 75, 101, 0.12)',
-              backgroundColor: '#FFFFFF',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: '1px solid rgba(19, 75, 101, 0.15)',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(6px)',
+              boxShadow: '0 2px 6px rgba(11, 37, 53, 0.05)',
               transition: 'all 0.15s',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = '#0B2535';
               e.currentTarget.style.borderColor = '#134B65';
-              e.currentTarget.style.backgroundColor = '#F0F6F9';
+              e.currentTarget.style.backgroundColor = '#FFFFFF';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#34576B';
-              e.currentTarget.style.borderColor = 'rgba(19, 75, 101, 0.12)';
-              e.currentTarget.style.backgroundColor = '#FFFFFF';
+              e.currentTarget.style.color = '#134B65';
+              e.currentTarget.style.borderColor = 'rgba(19, 75, 101, 0.15)';
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
             }}
           >
             <ArrowLeft size={16} />
@@ -136,50 +136,14 @@ export const LoginPage: React.FC = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.65rem',
               textDecoration: 'none',
             }}
           >
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '9px',
-                backgroundColor: '#134B65',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                boxShadow: '0 2px 8px rgba(19, 75, 101, 0.2)',
-              }}
-            >
-              <HeartPulse size={19} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <span
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '1.3rem',
-                  fontWeight: 800,
-                  color: '#0B2535',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                WiQayati
-              </span>
-              <span
-                style={{
-                  fontSize: '0.6rem',
-                  fontWeight: 700,
-                  backgroundColor: '#1F8A70',
-                  color: '#FFFFFF',
-                  padding: '2px 5px',
-                  borderRadius: '3px',
-                }}
-              >
-                SANTÉ
-              </span>
-            </div>
+            <img
+              src={wiqayatiLogo}
+              alt="Wiqayati"
+              style={{ height: '65px', width: 'auto', objectFit: 'contain' }}
+            />
           </Link>
         </header>
 

@@ -13,6 +13,12 @@ export interface Utilisateur {
   gouvernorat?: string;
   expire_le?: string | null;
   mot_de_passe_temporaire: boolean;
+  // Champs affectation dispensaire / campagne
+  structure_nom?: string;
+  structure_localisation?: string;
+  structure_code?: string;
+  responsable_structure?: string;
+  campagne_date_fin?: string | null;
 }
 
 interface AuthContextType {

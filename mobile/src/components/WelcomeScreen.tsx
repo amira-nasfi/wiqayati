@@ -11,8 +11,11 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { WiqayatiTokens } from '../constants/theme';
+
+const LOGO = require('../../assets/images/logo.png');
 
 interface WelcomeScreenProps {
   onConnexion: () => void;
@@ -61,9 +64,11 @@ export default function WelcomeScreen({ onConnexion }: WelcomeScreenProps) {
           </View>
 
           <View style={styles.logoConteneur}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoLettre}>W</Text>
-            </View>
+            <Image
+              source={LOGO}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
 
           <Text style={styles.appNom}>Wiqayati</Text>
@@ -165,22 +170,11 @@ const styles = StyleSheet.create({
   },
   logoConteneur: {
     marginBottom: 12,
-  },
-  logoCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: WiqayatiTokens.colors.primary,
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: WiqayatiTokens.colors.surfaceHighlight,
-    ...WiqayatiTokens.shadows.elevated,
   },
-  logoLettre: {
-    color: WiqayatiTokens.colors.textInverse,
-    fontSize: 40,
-    fontWeight: '900',
+  logoImage: {
+    width: 140,
+    height: 140,
   },
   appNom: {
     color: WiqayatiTokens.colors.textPrimary,

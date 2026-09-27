@@ -57,6 +57,38 @@ class CompteUtilisateur(AbstractBaseUser, PermissionsMixin):
         help_text=_("Gouvernorat d'affectation (agents uniquement)")
     )
 
+    # Affectation structure / dispensaire / campagne
+    structure_nom = models.CharField(
+        _('nom de la structure'),
+        max_length=150,
+        blank=True,
+        help_text=_("Nom du dispensaire/CSB ou de la campagne mobile")
+    )
+    structure_localisation = models.CharField(
+        _('localisation de la structure'),
+        max_length=200,
+        blank=True,
+        help_text=_("Délégation, ville ou adresse d'intervention")
+    )
+    structure_code = models.CharField(
+        _('code structure'),
+        max_length=50,
+        blank=True,
+        help_text=_("Code CSB ou identifiant de caravane")
+    )
+    responsable_structure = models.CharField(
+        _('responsable structure'),
+        max_length=100,
+        blank=True,
+        help_text=_("Médecin chef de centre ou coordinateur de campagne")
+    )
+    campagne_date_fin = models.DateField(
+        _('date de fin de campagne'),
+        null=True,
+        blank=True,
+        help_text=_("Date de fin de validité opérationnelle de la campagne")
+    )
+
     # Référence FHIR — null pour CITOYEN et ADMIN
     fhir_practitioner_id = models.CharField(
         _('identifiant FHIR Practitioner'),

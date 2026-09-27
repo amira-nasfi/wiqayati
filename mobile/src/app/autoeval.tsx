@@ -87,8 +87,12 @@ export default function AutoEvaluationScreen() {
   // Données du formulaire
   const [genre, setGenre]             = useState<Genre>('M');
   const [age, setAge]                 = useState('');
-  const [imc, setImc]                 = useState('');
+  const [taille, setTaille]           = useState('170');
+  const [poids, setPoids]             = useState('70');
+  const [imc, setImc]                 = useState('24.2');
   const [tourTaille, setTourTaille]   = useState('');
+  const [sbp, setSbp]                 = useState('');
+  const [priseAntihypertenseur, setPriseAntihypertenseur] = useState(false);
   const [famille, setFamille]         = useState(false);
   const [hypertension, setHypertension] = useState(false);
   const [diabeteGest, setDiabeteGest] = useState(false);
@@ -100,12 +104,25 @@ export default function AutoEvaluationScreen() {
   const [chargement, setChargement] = useState(false);
   const [resultat, setResultat]     = useState<any | null>(null);
   const [erreur, setErreur]         = useState<string | null>(null);
+  // Champ optionnel supplémentaire (FINDRISC enrichi)
+  const [highGlucoseHist, setHighGlucoseHist] = useState(false);
+
+  const recalculerImc = (tStr: string, pStr: string) => {
+    const t = parseFloat(tStr);
+    const p = parseFloat(pStr);
+    if (!isNaN(t) && !isNaN(p) && t > 50 && p > 20) {
+      const imcCalcule = (p / ((t / 100) ** 2)).toFixed(1);
+      setImc(imcCalcule);
+    }
+  };
 
   const validerFormulaire = (): string | null => {
     if (!age || isNaN(Number(age)) || Number(age) < 18 || Number(age) > 120)
       return "Veuillez saisir un âge valide (18–120 ans).";
     if (!imc || isNaN(Number(imc)) || Number(imc) < 10 || Number(imc) > 80)
       return "Veuillez saisir un IMC valide (ex : 24.5).";
+    if (sbp && (isNaN(Number(sbp)) || Number(sbp) < 60 || Number(sbp) > 260))
+      return "Veuillez saisir une pression artérielle systolique valide (60-260 mmHg).";
     return null;
   };
 
@@ -121,8 +138,12 @@ export default function AutoEvaluationScreen() {
         donnees: {
           genre,
           age: Number(age),
+          taille_cm: taille ? Number(taille) : 170,
+          poids_kg: poids ? Number(poids) : 70,
           imc: Number(imc),
           tour_taille_cm: tourTaille ? Number(tourTaille) : undefined,
+          sbp: sbp ? Number(sbp) : null,
+          prise_antihypertenseur: Boolean(priseAntihypertenseur),
           antecedents_familiaux_diabete: famille,
           hypertension_diagnostiquee: hypertension,
           diabete_gestationnel_antecedent: diabeteGest,
@@ -133,6 +154,7 @@ export default function AutoEvaluationScreen() {
           glycemie_jeun_mmol: null,
           medicaments_corticoides: false,
           acanthosis_nigricans: false,
+          high_glucose_hist: Boolean(highGlucoseHist),
         },
       });
       setResultat(resp.data);
@@ -156,6 +178,8 @@ export default function AutoEvaluationScreen() {
   if (resultat) {
     const eval_ = resultat.evaluation;
     const niveau = eval_?.niveau_risque || 'FAIBLE';
+    const mlSupp = eval_?.ml_supplement ?? null;
+    const planSoin = resultat.plan_soin ?? null;
     const riskToken = niveau === 'ELEVE'
       ? WiqayatiTokens.colors.risk.eleve
       : niveau === 'INTERMEDIAIRE'
@@ -166,6 +190,30 @@ export default function AutoEvaluationScreen() {
 
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Statut de vérification clinique réservé au nutritionniste */}
+        <View style={styles.verificationBanner}>
+          <View style={styles.verificationHeader}>
+            <View style={styles.verificationHeaderLeft}>
+              <Text style={styles.verificationIcon}>⏳</Text>
+              <Text style={styles.verificationTitle}>Brouillon IA — Lecture seule</Text>
+            </View>
+            <View style={[
+              styles.verificationBadge,
+              planSoin?.statut === 'ACTIF' && styles.verificationBadgeValid
+            ]}>
+              <Text style={[
+                styles.verificationBadgeText,
+                planSoin?.statut === 'ACTIF' && styles.verificationBadgeTextValid
+              ]}>
+                {planSoin?.statut === 'ACTIF' ? '✓ Validé' : 'Brouillon IA'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.verificationText}>
+            Ce rapport a été généré automatiquement par le moteur d'intelligence clinique IA. Seul votre nutritionniste référent est habilité à vérifier, modifier et certifier votre plan de soin personnalisé.
+          </Text>
+        </View>
+
         {/* Carte de score principale */}
         <View style={[styles.resultatCard, { backgroundColor: riskToken.surface, borderColor: riskToken.border }]}>
           <View style={[styles.resultatIconWrapper, { backgroundColor: riskToken.border }]}>
@@ -191,6 +239,140 @@ export default function AutoEvaluationScreen() {
             {resultat.message}
           </Text>
         </View>
+
+        {/* Bloc ML supplément — FINDRISC + Détecteur */}
+        {mlSupp && (
+          <View style={styles.mlCard}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>🧠</Text>
+              <Text style={styles.cardTitre}>Analyse IA Approfondie</Text>
+            </View>
+
+            {/* FINDRISC */}
+            {mlSupp.risque_10_ans_pct != null && (
+              <View style={styles.mlMetricRow}>
+                <View style={styles.mlMetricLeft}>
+                  <Text style={styles.mlMetricLabel}>Risque DT2 à 10 ans</Text>
+                  <Text style={styles.mlMetricSub}>score FINDRISC {mlSupp.findrisc_score}/26</Text>
+                </View>
+                <View style={[styles.mlMetricBadge, 
+                  mlSupp.risque_10_ans_pct >= 25 ? styles.mlBadgeDanger :
+                  mlSupp.risque_10_ans_pct >= 15 ? styles.mlBadgeWarning :
+                  styles.mlBadgeSafe
+                ]}>
+                  <Text style={styles.mlMetricValue}>{mlSupp.risque_10_ans_pct}%</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Détecteur dysglécymie */}
+            {mlSupp.probabilite_dysglycemie != null && (
+              <View style={[styles.mlMetricRow, { marginTop: 10 }]}>
+                <View style={styles.mlMetricLeft}>
+                  <Text style={styles.mlMetricLabel}>Prob. dysglécémie actuelle</Text>
+                  <Text style={styles.mlMetricSub}>modèle ML (NHANES)</Text>
+                </View>
+                <View style={[styles.mlMetricBadge,
+                  mlSupp.dysglycemie_detectee ? styles.mlBadgeDanger : styles.mlBadgeSafe
+                ]}>
+                  <Text style={styles.mlMetricValue}>
+                    {Math.round(mlSupp.probabilite_dysglycemie * 100)}%
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Barre de progression visuelle du score ML */}
+            {mlSupp.risque_10_ans_pct != null && (
+              <View style={styles.progressBar}>
+                <View style={[
+                  styles.progressFill,
+                  { width: `${Math.min(mlSupp.risque_10_ans_pct * 2.5, 100)}%` as any,
+                    backgroundColor: mlSupp.risque_10_ans_pct >= 25
+                      ? WiqayatiTokens.colors.risk.eleve.base
+                      : mlSupp.risque_10_ans_pct >= 15
+                      ? WiqayatiTokens.colors.risk.intermediaire.base
+                      : WiqayatiTokens.colors.risk.faible.base
+                  }
+                ]} />
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Alerte référal médical urgent */}
+        {mlSupp?.requires_medical_referral && (
+          <View style={styles.referralAlert}>
+            <Text style={styles.referralAlertIcon}>🏥</Text>
+            <View style={styles.referralAlertBody}>
+              <Text style={styles.referralAlertTitle}>Consultation médicale recommandée</Text>
+              {mlSupp.orientation_medicale?.reason && (
+                <Text style={styles.referralAlertText}>{mlSupp.orientation_medicale.reason}</Text>
+              )}
+              {mlSupp.orientation_medicale?.to && (
+                <Text style={styles.referralAlertSub}>
+                  Examen conseillé : {mlSupp.orientation_medicale.to}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Plan de Soin Recommandé Immédiat (Nutrition & Activité) */}
+        {planSoin && (
+          <View style={styles.planCard}>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.cardHeaderIcon}>📋</Text>
+              <Text style={styles.cardTitre}>Plan Recommandé par l'IA</Text>
+            </View>
+            <Text style={styles.planNotice}>
+              Généré automatiquement par le protocole clinique de prévention. En attente de certification par votre nutritionniste.
+            </Text>
+
+            {/* Volet Nutrition */}
+            {planSoin.plan_nutrition && (
+              <View style={styles.planSectionNutrition}>
+                <View style={styles.planSectionHeader}>
+                  <Text style={styles.planSectionIcon}>🥗</Text>
+                  <Text style={styles.planSectionTitle}>
+                    {planSoin.plan_nutrition.titre || "Recommandations Nutritionnelles"}
+                  </Text>
+                </View>
+                {planSoin.plan_nutrition.objectifs?.map((obj: string, i: number) => (
+                  <View key={i} style={styles.planBulletRow}>
+                    <Text style={styles.planBulletGreen}>✓</Text>
+                    <Text style={styles.planBulletTextGreen}>{obj}</Text>
+                  </View>
+                ))}
+                {planSoin.plan_nutrition.conseils_specifiques ? (
+                  <View style={styles.planConseilBox}>
+                    <Text style={styles.planConseilText}>
+                      💡 Conseil : {planSoin.plan_nutrition.conseils_specifiques}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+
+            {/* Volet Activité Physique */}
+            {planSoin.plan_activite && (
+              <View style={styles.planSectionActivite}>
+                <View style={styles.planSectionHeader}>
+                  <Text style={styles.planSectionIcon}>🏃‍♂️</Text>
+                  <Text style={[styles.planSectionTitle, { color: '#1e40af' }]}>
+                    {planSoin.plan_activite.titre || "Programme d'Activité Physique"}
+                  </Text>
+                </View>
+                {planSoin.plan_activite.objectifs?.map((act: string, i: number) => (
+                  <View key={i} style={styles.planBulletRow}>
+                    <Text style={[styles.planBulletGreen, { color: '#2563eb' }]}>✓</Text>
+                    <Text style={[styles.planBulletTextGreen, { color: '#1e3a8a' }]}>{act}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Facteurs identifiés */}
         {eval_?.facteurs_principaux?.length > 0 && (
@@ -301,14 +483,48 @@ export default function AutoEvaluationScreen() {
           />
         </View>
 
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={[styles.inputGroup, { flex: 1 }]}>
+            <Text style={styles.label}>Taille (cm)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex : 170"
+              placeholderTextColor={WiqayatiTokens.colors.textMuted}
+              keyboardType="numeric"
+              value={taille}
+              onChangeText={(val) => {
+                setTaille(val);
+                recalculerImc(val, poids);
+              }}
+              returnKeyType="next"
+            />
+          </View>
+
+          <View style={[styles.inputGroup, { flex: 1 }]}>
+            <Text style={styles.label}>Poids (kg)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex : 70"
+              placeholderTextColor={WiqayatiTokens.colors.textMuted}
+              keyboardType="decimal-pad"
+              value={poids}
+              onChangeText={(val) => {
+                setPoids(val);
+                recalculerImc(taille, val);
+              }}
+              returnKeyType="next"
+            />
+          </View>
+        </View>
+
         <View style={styles.inputGroup}>
           <View style={styles.labelWithHint}>
             <Text style={styles.label}>Indice de Masse Corporelle (IMC)</Text>
-            <Text style={styles.labelHint}>Poids/(Taille)²</Text>
+            <Text style={[styles.labelHint, { color: WiqayatiTokens.colors.primary }]}>Calculé automatiquement</Text>
           </View>
           <TextInput
             style={styles.input}
-            placeholder="Ex : 26.5"
+            placeholder="Ex : 24.2"
             placeholderTextColor={WiqayatiTokens.colors.textMuted}
             keyboardType="decimal-pad"
             value={imc}
@@ -329,6 +545,22 @@ export default function AutoEvaluationScreen() {
             keyboardType="numeric"
             value={tourTaille}
             onChangeText={setTourTaille}
+            returnKeyType="next"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <View style={styles.labelWithHint}>
+            <Text style={styles.label}>Pression artérielle systolique (mmHg)</Text>
+            <Text style={styles.labelHint}>Optionnel, ex : 120</Text>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex : 120"
+            placeholderTextColor={WiqayatiTokens.colors.textMuted}
+            keyboardType="numeric"
+            value={sbp}
+            onChangeText={setSbp}
           />
         </View>
       </View>
@@ -352,6 +584,18 @@ export default function AutoEvaluationScreen() {
             sousLabel: 'Pression artérielle ≥ 140/90 mmHg',
             etat: hypertension,
             toggle: setHypertension,
+          },
+          {
+            label: 'Traitement antihypertenseur en cours',
+            sousLabel: 'Prise régulière de médicaments pour la tension',
+            etat: priseAntihypertenseur,
+            toggle: setPriseAntihypertenseur,
+          },
+          {
+            label: 'Glycémie élevée connue (prédiabète)',
+            sousLabel: 'Taux de sucre limite lors d’une prise de sang',
+            etat: highGlucoseHist,
+            toggle: setHighGlucoseHist,
           },
           ...(genre === 'F'
             ? [
@@ -780,8 +1024,239 @@ const styles = StyleSheet.create({
   },
   btnSecondaireTexte: {
     color: WiqayatiTokens.colors.primary,
-    ...WiqayatiTokens.typography.bodyMedium,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+  // ML Card
+  mlCard: {
+    backgroundColor: '#0f1a2e',
+    borderRadius: WiqayatiTokens.radii.xl,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#1e3a5f',
+    ...WiqayatiTokens.shadows.elevated,
+  },
+  mlMetricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mlMetricLeft: {
+    flex: 1,
+  },
+  mlMetricLabel: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mlMetricSub: {
+    color: '#718096',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  mlMetricBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  mlBadgeDanger: {
+    backgroundColor: 'rgba(220,38,38,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(220,38,38,0.5)',
+  },
+  mlBadgeWarning: {
+    backgroundColor: 'rgba(245,158,11,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.5)',
+  },
+  mlBadgeSafe: {
+    backgroundColor: 'rgba(16,185,129,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.5)',
+  },
+  mlMetricValue: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 3,
+    marginTop: 14,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  // Referral Alert
+  referralAlert: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(220,38,38,0.08)',
+    borderRadius: WiqayatiTokens.radii.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(220,38,38,0.3)',
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+  },
+  referralAlertIcon: {
+    fontSize: 26,
+  },
+  referralAlertBody: {
+    flex: 1,
+  },
+  referralAlertTitle: {
+    color: '#fca5a5',
+    fontWeight: '800',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  referralAlertText: {
+    color: '#fecaca',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  referralAlertSub: {
+    color: '#fca5a5',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Verification Banner
+  verificationBanner: {
+    backgroundColor: '#fffbeb',
+    borderRadius: WiqayatiTokens.radii.lg,
+    borderWidth: 1.5,
+    borderColor: '#fde68a',
+    padding: 14,
+    marginBottom: 16,
+    ...WiqayatiTokens.shadows.card,
+  },
+  verificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  verificationHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  verificationIcon: {
+    fontSize: 18,
+  },
+  verificationTitle: {
+    color: '#92400e',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  verificationBadge: {
+    backgroundColor: '#d97706',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  verificationBadgeValid: {
+    backgroundColor: '#059669',
+  },
+  verificationBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  verificationBadgeTextValid: {
+    color: '#ffffff',
+  },
+  verificationText: {
+    color: '#78350f',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  // Plan Card
+  planCard: {
+    backgroundColor: WiqayatiTokens.colors.surface,
+    borderRadius: WiqayatiTokens.radii.xl,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: WiqayatiTokens.colors.border,
+    ...WiqayatiTokens.shadows.elevated,
+  },
+  planNotice: {
+    color: WiqayatiTokens.colors.textMuted,
+    fontSize: 12,
+    marginBottom: 14,
+    fontStyle: 'italic',
+  },
+  planSectionNutrition: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#bbf7d0',
+    borderRadius: WiqayatiTokens.radii.lg,
+    padding: 14,
+    marginBottom: 12,
+  },
+  planSectionActivite: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
+    borderRadius: WiqayatiTokens.radii.lg,
+    padding: 14,
+  },
+  planSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  planSectionIcon: {
+    fontSize: 18,
+  },
+  planSectionTitle: {
+    color: '#166534',
+    fontWeight: '800',
+    fontSize: 14,
+    flex: 1,
+  },
+  planBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 6,
+  },
+  planBulletGreen: {
+    color: '#16a34a',
+    fontWeight: '800',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  planBulletTextGreen: {
+    color: '#14532d',
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
+  planConseilBox: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: WiqayatiTokens.radii.md,
+    padding: 8,
+    marginTop: 6,
+  },
+  planConseilText: {
+    color: '#0d9488',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

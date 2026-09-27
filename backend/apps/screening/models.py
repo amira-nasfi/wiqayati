@@ -34,6 +34,14 @@ class ProfilPatient(models.Model):
         db_index=True,
         help_text=_("Clé unique nationale d'identification du patient")
     )
+    cin = models.CharField(
+        _('numéro CIN'),
+        max_length=20,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text=_("Numéro CIN tunisien (8 chiffres) ou document d'identité")
+    )
     prenom = models.CharField(_('prénom'), max_length=100)
     nom = models.CharField(_('nom'), max_length=100)
     date_naissance = models.DateField(_('date de naissance'))
@@ -67,6 +75,7 @@ class ProfilPatient(models.Model):
         ordering = ['nom', 'prenom']
         indexes = [
             models.Index(fields=['ins']),
+            models.Index(fields=['cin', 'date_naissance']),
             models.Index(fields=['gouvernorat']),
         ]
 

@@ -2,17 +2,108 @@
 Générateur de plans de soins types (nutrition et activité physique)
 selon le niveau de risque de diabète de type 2 (FAIBLE, INTERMÉDIAIRE, ÉLEVÉ).
 Entièrement rédigé en français et adapté au contexte tunisien.
+
+Phase 2 : Enrichissement via protocol_engine ML si disponible.
+Le moteur ML génère des items personnalisés (activité, nutrition, orientation médicale).
+En cas d'indisponibilité, le générateur statique par niveau de risque est utilisé en fallback.
 """
-from typing import Dict, Any, Tuple
+import logging
+from typing import Dict, Any, Tuple, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class GenerateurPlanSoin:
     """
     Produit un plan de soin initial (nutrition + activité physique) adapté au niveau de risque.
+
+    Stratégie :
+    1. Si un protocole ML est fourni (issu de protocol_engine via ServiceProtocoleML),
+       extrait les items nutrition/activité personnalisés et les utilise.
+    2. Sinon (fallback), applique les plans statiques par niveau de risque.
     """
 
     @classmethod
-    def generer_plans(cls, niveau_risqu: str, facteurs: list = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def _plan_depuis_protocole_ml(cls, protocole_ml: Dict[str, Any]) -> Tuple[Optional[Dict], Optional[Dict]]:
+        """
+        Extrait les recommandations nutrition et activité depuis un protocole ML généré.
+        Retourne (None, None) si le protocole ne contient pas les sections attendues.
+        """
+        if not protocole_ml or "items" not in protocole_ml:
+            return None, None
+
+        items = protocole_ml.get("items", [])
+        nutrition_items = [i for i in items if i.get("category") in ("diet", "nutrition", "alimentation")]
+        activite_items = [i for i in items if i.get("category") in ("activity", "exercise", "activite", "activité", "activite_physique")]
+        medical_items = [i for i in items if i.get("category") in ("medical", "referral", "clinical", "consultation", "suivi")]
+
+        if not nutrition_items and not activite_items:
+            return None, None
+
+        # Construction du plan nutrition depuis les items ML
+        nutrition_objectifs = [i.get("action") or i.get("recommendation", "") for i in nutrition_items if i.get("action") or i.get("recommendation")]
+        if not nutrition_objectifs:
+            nutrition_objectifs = [i.get("text", "") for i in nutrition_items if i.get("text")]
+
+        medical_notes = ""
+        if medical_items:
+            urgencies = [i.get("urgency", "") for i in medical_items if i.get("urgency")]
+            reasons = [i.get("action") or i.get("recommendation", "") for i in medical_items if i.get("action") or i.get("recommendation")]
+            if reasons:
+                medical_notes = " | ".join(reasons[:2])
+
+        nutrition = {
+            "titre": protocole_ml.get("summary", "Plan nutritionnel personnalisé (IA)"),
+            "objectifs": nutrition_objectifs or ["Suivre les recommandations nutritionnelles personnalisées."],
+            "conseils_specifiques": medical_notes or protocole_ml.get("patient_summary", ""),
+            "frequence_suivi": "Selon recommandation médicale",
+            "source_moteur": "wq-ml-1.0",
+            "protocole_id": protocole_ml.get("protocol_id"),
+        }
+
+        # Construction du plan activité depuis les items ML
+        activite_objectifs = [i.get("action") or i.get("recommendation", "") for i in activite_items if i.get("action") or i.get("recommendation")]
+        if not activite_objectifs:
+            activite_objectifs = [i.get("text", "") for i in activite_items if i.get("text")]
+
+        activite = {
+            "titre": "Programme d'activité physique personnalisé (IA)",
+            "objectifs": activite_objectifs or ["Suivre le programme d'activité physique adapté."],
+            "recommandations": protocole_ml.get("disclaimer", "Intensité progressive selon tolérance individuelle."),
+            "source_moteur": "wq-ml-1.0",
+            "urgent_flags": protocole_ml.get("urgent_flags", []),
+            "requires_medical_referral": protocole_ml.get("requires_medical_referral", False),
+        }
+
+        return nutrition, activite
+
+    @classmethod
+    def generer_plans(
+        cls,
+        niveau_risqu: str,
+        facteurs: list = None,
+        protocole_ml: Dict[str, Any] = None
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """
+        Génère les plans nutrition et activité.
+        Si protocole_ml est fourni (depuis ServiceProtocoleML), l'utilise en priorité.
+        Sinon, applique les règles statiques par niveau de risque.
+        """
+        # Tentative d'utilisation du protocole ML
+        if protocole_ml:
+            nutrition_ml, activite_ml = cls._plan_depuis_protocole_ml(protocole_ml)
+            if nutrition_ml and activite_ml:
+                logger.info("Plan de soin généré depuis le moteur ML (protocol_engine).")
+                return nutrition_ml, activite_ml
+            else:
+                logger.warning("Protocole ML présent mais items insuffisants, bascule sur règles statiques.")
+
+        # Fallback : règles statiques par niveau de risque
+        return cls._generer_plans_statiques(niveau_risqu)
+
+    @classmethod
+    def _generer_plans_statiques(cls, niveau_risqu: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Plans statiques de référence selon le niveau de risque."""
         if niveau_risqu == "FAIBLE":
             nutrition = {
                 "titre": "Alimentation préventive et équilibrée",

@@ -522,20 +522,21 @@
       <li class="nav-item"><a href="#findrisc-scoring">4. Algorithme & Scoring</a></li>
       <li class="nav-item"><a href="#contrat-api">5. Contrat JSON v1.0 Figé</a></li>
       <li class="nav-item"><a href="#workflow-soin">6. Workflow Plan & Nutrition</a></li>
+      <li class="nav-item"><a href="#agent-hybride">7. Agent Hybride & DMI (Cible)</a></li>
     </ul>
 
     <div class="nav-group-title">Composants Applicatifs</div>
     <ul class="nav-list">
-      <li class="nav-item"><a href="#backend">7. Backend Core (Django)</a></li>
-      <li class="nav-item"><a href="#frontend-web">8. Frontend Web (React 19)</a></li>
-      <li class="nav-item"><a href="#mobile-app">9. Application Mobile Expo</a></li>
-      <li class="nav-item"><a href="#interop-fhir">10. Interopérabilité HL7 FHIR</a></li>
+      <li class="nav-item"><a href="#backend">8. Backend Core (Django)</a></li>
+      <li class="nav-item"><a href="#frontend-web">9. Frontend Web (React 19)</a></li>
+      <li class="nav-item"><a href="#mobile-app">10. Application Mobile Expo</a></li>
+      <li class="nav-item"><a href="#interop-fhir">11. Interopérabilité HL7 FHIR</a></li>
     </ul>
 
     <div class="nav-group-title">Sécurité & Exploitation</div>
     <ul class="nav-list">
-      <li class="nav-item"><a href="#securite-rbac">11. Sécurité & Droits (RBAC)</a></li>
-      <li class="nav-item"><a href="#runbook">12. Guide d'Exploitation</a></li>
+      <li class="nav-item"><a href="#securite-rbac">12. Sécurité & Droits (RBAC)</a></li>
+      <li class="nav-item"><a href="#runbook">13. Guide d'Exploitation</a></li>
     </ul>
   </aside>
 
@@ -549,11 +550,12 @@
       <p>
         Système national tunisien de dépistage précoce, de stratification du risque et de coordination 
         préventive du diabète de type 2. Document de référence couvrant le backend Django, le portail web multi-rôles, 
-        l'application mobile Expo et le contrat formel du pipeline de dépistage.
+        l'application mobile Expo, le contrat formel du pipeline et l'intégration de l'Agent Hybride de soins personnalisés.
       </p>
       <div class="meta-bar">
-        <div><strong>Version Système :</strong> 1.0.0 Production</div>
+        <div><strong>Version Système :</strong> 1.1.0 Roadmap</div>
         <div><strong>Contrat Moteur Risque :</strong> Figé v1.0 (2026-09-24)</div>
+        <div><strong>Générateur Soins :</strong> Transition Agent Hybride (DMI + Formulaire)</div>
         <div><strong>Standard Données :</strong> HL7 FHIR R4</div>
         <div><strong>Pivot Patient :</strong> Identifiant National de Santé (INS)</div>
       </div>
@@ -598,8 +600,9 @@
     <section id="architecture">
       <h2 class="section-title">2. Architecture Globale du Système</h2>
       <p>
-        L'écosystème WiQayati interconnecte cinq grands sous-systèmes logiciels garantissant une haute résilience, 
-        la traçabilité médico-légale et un fonctionnement transparent offline-first sur le terrain.
+        L'écosystème WiQayati interconnecte six grands sous-systèmes logiciels garantissant une haute résilience, 
+        la traçabilité médico-légale, un fonctionnement transparent offline-first sur le terrain et la génération assistée 
+        par <strong>Agent Hybride (couplage Formulaire de dépistage + Dossier Médical Informatisé DMI)</strong>.
       </p>
 
       <div class="mermaid-wrapper">
@@ -621,9 +624,16 @@ graph TB
         Accounts["apps.accounts\n(JWT & RBAC multi-rôles)"]
         Screening["apps.screening\n(Pivot INS & Questionnaire)"]
         RiskEngine["apps.risk_engine\n(Client Moteur & Stub v1.0)"]
-        CarePlan["apps.care_plan\n(Protocoles Nutrition & Activité)"]
+        CarePlan["apps.care_plan\n(Orchestrateur & Plans de Soins)"]
         Queue["apps.nutritionist_queue\n(Ordonnancement priorisé)"]
         Audit["apps.audit\n(Journal d'Audit Immuable)"]
+    end
+
+    subgraph ExternalServices["Services Métier & Intelligence Clinique"]
+        DMI["🏥 DMI / Dossier Médical Informatisé\n(Antécédents, Traitements, Bilans Biologiques)"]
+        AgentHybride["🤖 Agent Hybride API (:8010)\n(Extraction Formulaire + DMI & Génération Plan)"]
+        RulesFallback["⚙️ Moteur de Règles Cliniques (Fallback)\n(protocol_engine.py déterministe)"]
+        RemoteAI["Microservice IA Risque\n(Optionnel distant)"]
     end
 
     subgraph Infrastructure["Infrastructure & Données"]
@@ -631,7 +641,6 @@ graph TB
         Redis[("Redis\n(Cache & Broker Celery)")]
         Celery["Workers Asynchrones Celery"]
         Hapi["Serveur HAPI FHIR R4"]
-        RemoteAI["Microservice IA distant\n(Optionnel)"]
     end
 
     Mobile --> Proxy
@@ -646,6 +655,11 @@ graph TB
     Redis --> Celery
     Celery --> Hapi
     RiskEngine -.->|Failover transparent| RemoteAI
+
+    CarePlan -->|1. Extraction Contexte DMI| DMI
+    CarePlan -->|2. Ingestion Formulaire + DMI| AgentHybride
+    AgentHybride -.->|Failover si timeout/erreur| RulesFallback
+    AgentHybride -->|3. Plan Personnalisé Brouillon| Queue
         </div>
       </div>
     </section>
@@ -775,7 +789,7 @@ graph TB
         </table>
       </div>
 
-      <h3 class="subsection-title">Séquence Chronologique du Pipeline</h3>
+      <h3 class="subsection-title">Séquence Chronologique du Pipeline (Intégration Agent Hybride & DMI)</h3>
       <div class="mermaid-wrapper">
         <div class="mermaid">
 sequenceDiagram
@@ -784,7 +798,8 @@ sequenceDiagram
     participant API as Endpoint /screening/soumissions/
     participant DB as Base PostgreSQL (Pivot INS)
     participant Moteur as Moteur de Risque (Stub / IA)
-    participant PlanGen as Générateur CarePlan
+    participant DMI as Connecteur DMI / FHIR
+    participant Agent as Agent Hybride API (Nutrition & Activité)
     participant FileNutri as File Ordonnancée Nutrition
     actor Nutritionniste as Praticien Nutritionniste
 
@@ -795,16 +810,25 @@ sequenceDiagram
     API->>Moteur: ClientMoteurRisque.evaluer(payload v1.0)
     Moteur-->>API: { niveau_risque, score, facteurs[], version_moteur }
     API->>DB: Enregistrement ResultatEvaluationRisque
-    API->>PlanGen: GenerateurPlanSoin.generer_plans(niveau, facteurs)
-    PlanGen-->>API: Recommandations personnalisées (Nutrition + Activité)
-    API->>DB: Enregistrement PlanSoin (Statut: BROUILLON)
+    
+    rect rgb(232, 241, 245)
+        Note over API,Agent: Cycle Génération Personnalisée (Agent Hybride)
+        API->>DMI: Extraction antécédents, traitements & bilans biologiques (INS)
+        DMI-->>API: Données structurées DMI (HbA1c, HTA, cardiopathie, biologie)
+        API->>Agent: POST /api/v1/agent/generer-plan-soin/ (Formulaire + DMI + Score)
+        Note over Agent: Application Guardrails cliniques & NLP contextualisé
+        Agent-->>API: Plan Personnalisé (Objectifs Nutrition + Activité + Justification)
+    end
+
+    API->>DB: Enregistrement PlanSoin (Statut: BROUILLON, Source: Agent Hybride)
     API->>FileNutri: Création TacheNutritionniste (Priorité: STAT / URGENT / ROUTINE)
     Note over API: Fin transaction atomique (Commit)
-    API-->>Demandeur: HTTP 201 Created (Score + Plan d'attente)
+    API-->>Demandeur: HTTP 201 Created (Score + Plan d'attente brouillon)
 
-    Note over Nutritionniste,FileNutri: Workflow Médical Différé
+    Note over Nutritionniste,FileNutri: Workflow Médical Différé (Supervision Humaine)
     Nutritionniste->>FileNutri: Dépouillement priorisé des dossiers
-    Nutritionniste->>DB: Ajustement diététique + Validation (Statut: VALIDE)
+    Nutritionniste->>DB: Consultation justification Agent + Ajustement diététique
+    Nutritionniste->>DB: Validation définitive (Statut: VALIDE)
     DB-->>Demandeur: Plan actif disponible sur Mobile ("Mon Plan" & "Suivi")
         </div>
       </div>
@@ -971,9 +995,292 @@ stateDiagram-v2
       </div>
     </section>
 
-    <!-- 7. BACKEND CORE -->
+    <!-- 7. AGENT HYBRIDE & DMI (CIBLE) -->
+    <section id="agent-hybride">
+      <h2 class="section-title">7. Architecture Cible : Agent Hybride DMI & Génération de Plan Personnalisé</h2>
+      <p>
+        Dans la version initiale, la génération des protocoles de soins reposait sur un moteur de règles déterministe statique 
+        (<code>protocol_engine.py</code>). Afin de dépasser les limitations des règles rigides et d'offrir une prise en charge 
+        médicale de haute précision, l'architecture évolue vers un <strong>Agent Hybride exposé sous forme d'API REST</strong>. 
+        Cet agent est capable d'extraire, de croiser et d'analyser conjointement les données du <strong>formulaire de dépistage</strong> 
+        et les données cliniques du <strong>Dossier Médical Informatisé (DMI)</strong>.
+      </p>
+
+      <div class="grid-3">
+        <div class="stat-card accent">
+          <div class="stat-title">Architecture Hybride</div>
+          <div class="stat-value">Cognitif + Guardrails</div>
+          <div class="stat-desc">Synergie entre synthèse NLP contextualisée et règles déterministes dures de sécurité médicale.</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Source Multimodale</div>
+          <div class="stat-value">Formulaire + DMI</div>
+          <div class="stat-desc">Croisement des 14 variables FINDRISC avec les antécédents, traitements et bilans du DMI.</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-title">Contrôle Médical</div>
+          <div class="stat-value">Human-in-the-Loop</div>
+          <div class="stat-desc">Le plan reste un brouillon clinique obligatoirement examiné, ajusté et certifié par le nutritionniste.</div>
+        </div>
+      </div>
+
+      <h3 class="subsection-title">1. Justification Clinique : Du Moteur de Règles à l'Agent Hybride</h3>
+      <p>
+        Le remplacement du moteur basé sur des règles (« engine ruler ») par un Agent Hybride répond à des impératifs cliniques concrets :
+      </p>
+      <ul>
+        <li><strong>Dépassement des gabarits statiques :</strong> Le moteur de règles se limitait à injecter des fragments textuels pré-écrits selon des seuils discrets (IMC &ge; 30, âge &ge; 45), sans capacité d'individualisation fine.</li>
+        <li><strong>Valorisation du Dossier Médical Informatisé (DMI) :</strong> Un patient n'est pas réductible à un questionnaire ponctuel. L'Agent Hybride interroge l'historique médical pour identifier les pathologies sous-jacentes (insuffisance rénale débutante, dyslipidémie, antécédent d'accident coronarien, diabète gestationnel passé).</li>
+        <li><strong>Prise en compte des interactions médicamenteuses :</strong> L'agent adapte ses conseils diététiques et d'activité selon les traitements en cours dans le DMI (ex: insuline ou sulfamides impliquant un risque d'hypoglycémie à l'effort, bêtabloquants limitant la fréquence cardiaque maximale).</li>
+        <li><strong>Ancrage nutritionnel méditerranéen tunisien :</strong> Formulation de recommandations adaptées aux habitudes culinaires réelles (bsissa d'orge, huile d'olive contrôlée, couscous aux légumes, modulation du pain blanc), impossibles à combiner de façon combinatoire dans un arbre de règles statiques.</li>
+      </ul>
+
+      <div class="callout info">
+        <div class="callout-title">Pourquoi qualifier cet agent d'« Hybride » ?</div>
+        <p style="margin: 0; font-size: 14px;">
+          L'agent ne se contente pas d'une génération libre de texte par un modèle de langage (LLM). Il est qualifié d'<strong>hybride</strong> car il orchestre deux piliers indissociables :
+          <br><strong>1. Pilier Cognitif / Génératif :</strong> Extraction sémantique des antécédents DMI et synthèse contextuelle personnalisée.
+          <br><strong>2. Pilier Déterministe / Guardrails Cliniques :</strong> Contrôles algorithmiques inviolables appliquant les recommandations de l'OMS et de la Société Tunisienne d'Endocrinologie (contre-indications absolues d'efforts intenses, interdictions d'apports glucidiques rapides, déclenchement impératif des drapeaux d'urgence vitale <code>urgent_flags</code>).
+        </p>
+      </div>
+
+      <h3 class="subsection-title">2. Matrice d'Extraction Croisée (Formulaire vs DMI)</h3>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Source de Données</th>
+              <th>Éléments Extraits</th>
+              <th>Format & Canal</th>
+              <th>Impact sur le Plan Personnalisé</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Formulaire de Dépistage</strong> (Terrain / Mobile)</td>
+              <td>14 variables FINDRISC : Âge, IMC, tour de taille, niveau d'activité déclarée, qualité de l'alimentation, statut tabagique, antécédents familiaux directs.</td>
+              <td>JSON structuré via <code>POST /screening/soumissions/</code></td>
+              <td>Calcule le niveau de risque global de base (Faible, Intermédiaire, Élevé) et quantifie la sédentarité actuelle.</td>
+            </tr>
+            <tr>
+              <td><strong>DMI : Biologie Médicale</strong></td>
+              <td>Historique de glycémies à jeun, dernier dosage d'HbA1c, débit de filtration glomérulaire (DFG / créatinine), bilan lipidique (LDL, HDL, triglycérides), uricémie.</td>
+              <td>Connecteur DMI / HL7 FHIR (<code>Observation</code>)</td>
+              <td>Ajuste l'agressivité des cibles glycémiques et prévient les surcharges rénales (adaptation des apports protéiques).</td>
+            </tr>
+            <tr>
+              <td><strong>DMI : Antécédents Médicaux</strong></td>
+              <td>Hypertension artérielle documentée, cardiopathie ischémique, accident vasculaire cérébral, diabète gestationnel antérieur, stéatose hépatique (NASH), arthrose des membres inférieurs.</td>
+              <td>Dossier Patient INS / FHIR (<code>Condition</code>)</td>
+              <td>Définit les contre-indications d'activité physique (ex: privilégier la marche ou natation en cas de gonarthrose; proscrire les efforts isométriques si HTA sévère).</td>
+            </tr>
+            <tr>
+              <td><strong>DMI : Traitements Actifs</strong></td>
+              <td>Prescriptions en cours : Antidiabétiques oraux (metformine, sulfamides hypoglycémiants), statines, antihypertenseurs (IEC, bêtabloquants), corticoïdes au long cours.</td>
+              <td>Dossier Pharmacologique / FHIR (<code>MedicationRequest</code>)</td>
+              <td>Anticipe les effets secondaires métaboliques, prévient le risque hypoglycémique et alerte en cas d'interaction hygiéno-diététique.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="subsection-title">3. Architecture du Pipeline de l'Agent Hybride</h3>
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph LR
+    subgraph Ingestion["1. Ingestion Sécurisée"]
+        F[Formulaire Dépistage\n14 variables JSON]
+        D[Connecteur DMI\nAntécédents & Biologie]
+    end
+
+    subgraph Agent["2. Agent Hybride API (POST /api/v1/agent/generer-plan-soin/)"]
+        Aggregator["Agrégateur Clinique\n(Profil contextuel unifié)"]
+        LLM["Moteur Cognitif IA\n(Synthèse contextuelle & diète tunisienne)"]
+        Guardrails{"Guardrails Déterministes\n(Sécurité médicale & seuils OMS)"}
+        OutputGen["Générateur de Contrat\n(JSON normalisé + Justifications)"]
+    end
+
+    subgraph CarePlan["3. Intégration WiQayati"]
+        PlanDraft["PlanSoin (Statut: BROUILLON)\n(Nutrition + Activité + Alertes)"]
+        NutriQueue["File de Validation\n(Praticien Nutritionniste)"]
+    end
+
+    F --> Aggregator
+    D --> Aggregator
+    Aggregator --> LLM
+    LLM --> Guardrails
+    Guardrails -->|Conforme| OutputGen
+    Guardrails -.->|Correction de sécurité| OutputGen
+    OutputGen --> PlanDraft
+    PlanDraft --> NutriQueue
+        </div>
+      </div>
+
+      <h3 class="subsection-title">4. Spécification Formelle de l'API REST de l'Agent Hybride</h3>
+      <p>
+        L'agent est déployé comme un service indépendant (microservice FastAPI / Django) 
+        accessible via le protocole REST sécurisé (mTLS ou jeton d'authentification Bearer inter-services).
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Méthode & Endpoint</th>
+              <th>Description Fonctionnelle</th>
+              <th>Entêtes Requis</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>POST /api/v1/agent/generer-plan-soin/</code></td>
+              <td>Extrait les signaux du formulaire et du DMI pour produire un plan personnalisé complet.</td>
+              <td><code>Content-Type: application/json</code><br><code>Authorization: Bearer &lt;SERVICE_TOKEN&gt;</code><br><code>X-Request-Id: &lt;UUID&gt;</code></td>
+            </tr>
+            <tr>
+              <td><code>GET /api/v1/agent/health/</code></td>
+              <td>Sonde de vivacité et d'état du modèle cognitif et des bases de règles.</td>
+              <td><code>Accept: application/json</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="subsection-title">Contrat de Requête vers l'Agent Hybride (Request Schema)</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copier</button><code>{
+  "request_id": "9c12a870-1f24-4f9e-a89b-871d3f019a2e",
+  "ins_patient": "TUN10001980",
+  "horodatage": "2026-09-27T10:15:00Z",
+  "formulaire_depistage": {
+    "age": 54,
+    "genre": "M",
+    "imc": 31.8,
+    "tour_taille_cm": 104.0,
+    "niveau_activite_physique": "FAIBLE",
+    "qualite_alimentation": "MAUVAISE",
+    "statut_tabagisme": "FUMEUR_ACTUEL",
+    "antecedents_familiaux_diabete": true,
+    "hypertension_diagnostiquee": true,
+    "acanthosis_nigricans": true,
+    "symptomes_urgents": false
+  },
+  "dmi_patient": {
+    "biologie_recente": {
+      "glycemie_a_jeun_g_l": 1.28,
+      "hba1c_pct": 6.4,
+      "dfg_ml_min": 78,
+      "cholesterol_total_g_l": 2.35,
+      "triglycerides_g_l": 1.95,
+      "date_dernier_bilan": "2026-08-14"
+    },
+    "antecedents_cliniques": [
+      { "code": "I10", "libelle": "Hypertension artérielle essentielle", "depuis": 2021 },
+      { "code": "M17", "libelle": "Gonarthrose bilatérale mécanique", "depuis": 2023 }
+    ],
+    "traitements_en_cours": [
+      { "molecule": "Amlodipine", "dosage": "5mg/j", "classe": "Inhibiteur calcique" },
+      { "molecule": "Atorvastatine", "dosage": "20mg/j", "classe": "Statine" }
+    ],
+    "notes_medecin_traitant": "Patient motivé mais difficultés d'observance alimentaire. Douleurs aux genoux à la course."
+  },
+  "score_risque_evalue": {
+    "niveau": "ELEVE",
+    "score_findrisc": 78.0,
+    "version_moteur": "wq-ml-1.0"
+  },
+  "contexte_culturel": {
+    "pays": "Tunisie",
+    "regime_prefere": "Mediterraneen tunisien",
+    "langue": "fr"
+  }
+}</code></pre>
+
+      <h3 class="subsection-title">Contrat de Réponse de l'Agent Hybride (Response Schema HTTP 200)</h3>
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copier</button><code>{
+  "request_id": "9c12a870-1f24-4f9e-a89b-871d3f019a2e",
+  "ins_patient": "TUN10001980",
+  "statut": "SUCCES",
+  "version_agent": "hybrid-agent-v1.0",
+  "genere_le": "2026-09-27T10:15:01.320Z",
+  "plan_nutrition": {
+    "titre": "Protocole Nutritionnel Personnalisé — Rééquilibrage Méditerranéen & Profil Cardiovasculaire",
+    "objectifs": [
+      "Substituer le pain blanc par du pain complet ou galette d'orge (Khabz Chîr) à chaque repas principal.",
+      "Consommer 2 portions de légumes frais ou cuits par jour (salade mechouia allégée en huile, tajine aux légumes sans friture).",
+      "Limiter les glucides simples rapides et proscrire les boissons sucrées/gazéifiées.",
+      "Conserver 2 à 3 cuillères à soupe d'huile d'olive extra-vierge crue par jour, en supprimant les fritures.",
+      "Maintenir une hydratation minimale de 1.5 litre d'eau par jour."
+    ],
+    "conseils_specifiques": "Compte tenu de votre bilan lipidique (triglycérides à 1.95 g/L dans le DMI) et de l'antécédent d'hypertension, privilégier l'ail, les épices tunisiennes (cumin, coriandre, curcuma) pour relever les plats sans excès de sel marin.",
+    "adaptation_dmi": "Adapté au profil HTA + dyslipidémie mixte identifiés dans le dossier médical.",
+    "frequence_suivi": "Hebdomadaire (auto-suivi sur l'application mobile)"
+  },
+  "plan_activite": {
+    "titre": "Programme d'Activité Physique Adaptée — Impact Articulaire Faible",
+    "objectifs": [
+      "Pratiquer 30 minutes de marche active à plat, 4 à 5 fois par semaine.",
+      "Intégrer 2 séances hebdomadaires de renforcement doux ou gymnastique aquatique adaptée aux genoux.",
+      "Éviter la course à pied, les sauts et les descentes brutales d'escaliers."
+    ],
+    "recommandations": "Intensité modérée (aisance respiratoire : être capable de parler en marchant). Arrêt immédiat en cas d'essoufflement anormal ou de douleur thoracique.",
+    "contre_indications_dmi": [
+      "Gonarthrose bilatérale documentée : exclusion formelle des activités avec impacts articulaires lourds.",
+      "Traitement Amlodipine : hydratation rigoureuse à l'effort pour prévenir les baisses tensionnelles posturales."
+    ]
+  },
+  "justification_clinique": "L'agent a croisé un score FINDRISC élevé (78 pts, obésité androïde avec tour de taille 104 cm) avec une glycémie à jeun limite (1.28 g/L, stade prédiabétique) et une gonarthrose bilatérale extraite du DMI. Le programme d'activité a été orienté vers la marche plane non traumatisante, et le volet nutritionnel cible la régulation glycémique et lipidique selon le modèle méditerranéen tunisien.",
+  "urgent_flags": [],
+  "requires_medical_referral": true,
+  "delai_consultation_recommande": "Sous 15 jours (consultation CSB ou médecin traitant pour confirmation biologique)",
+  "confidence_score": 0.94
+}</code></pre>
+
+      <h3 class="subsection-title">5. Stratégie de Résilience & Plan de Bascule (Failover Déterministe)</h3>
+      <p>
+        Pour garantir une disponibilité de 100% de la plateforme de dépistage même en cas de panne temporaire du microservice 
+        d'Agent Hybride ou de latence réseau excessive, le backend Django implémente un <strong>disjoncteur transparent (Circuit Breaker)</strong> :
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Scénario Opérationnel</th>
+              <th>Comportement du Système</th>
+              <th>Impact Utilisateur / Praticien</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Nominal</strong> (Agent Hybride disponible)</td>
+              <td>L'orchestrateur <code>apps.care_plan</code> transmet le formulaire et l'extrait DMI. L'Agent Hybride répond en &lt; 1500 ms.</td>
+              <td>Plan hyper-personnalisé injecté en brouillon dans la file du nutritionniste avec badge « Généré par Agent Hybride v1.0 ».</td>
+            </tr>
+            <tr>
+              <td><strong>Timeout / Panne API</strong> (&gt; 3.0s ou HTTP 5xx)</td>
+              <td>Basculement automatique et immédiat vers le générateur de règles déterministes (<code>protocol_engine.py</code> / <code>GenerateurPlanSoin</code>).</td>
+              <td>Zéro blocage pour le citoyen ou l'agent terrain. Le dossier est créé avec le plan standard de repli et un badge « Repli Règles Cliniques ».</td>
+            </tr>
+            <tr>
+              <td><strong>Absence d'historique DMI</strong> (Nouveau patient sans dossier)</td>
+              <td>L'Agent Hybride fonctionne en mode dégradé en s'appuyant exclusivement sur les 14 variables du formulaire et les données biométriques.</td>
+              <td>Plan personnalisé généré sur la base des habitudes de vie déclarées et du score FINDRISC.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">Garantie Déontologique & Responsabilité Médicale</div>
+        L'Agent Hybride est un <strong>outil d'aide à la décision médicale (Clinical Decision Support)</strong> et ne prescrit aucun médicament. 
+        Conformément à la déontologie médicale tunisienne, <strong>seul le nutritionniste référent ou le médecin coordonnateur</strong> a le pouvoir de valider, 
+        d'amender et de publier le plan de soins vers l'application mobile citoyenne.
+      </div>
+    </section>
+
+    <!-- 8. BACKEND CORE -->
     <section id="backend">
-      <h2 class="section-title">7. Architecture Backend Core (Django REST Framework)</h2>
+      <h2 class="section-title">8. Architecture Backend Core (Django REST Framework)</h2>
       <p>
         Le backend est structuré en 7 applications autonomes dans <code>backend/apps/</code> :
       </p>
@@ -1001,7 +1308,7 @@ stateDiagram-v2
             <tr>
               <td><code>apps.care_plan</code></td>
               <td><code>PlanSoin</code></td>
-              <td>CarePlan FHIR, stockage JSON des objectifs, statut de cycle de vie (BROUILLON / VALIDE).</td>
+              <td>Orchestration des plans de soins, client d'appel de l'Agent Hybride (DMI + Formulaire), repli sur moteur de règles déterministe, statut de cycle de vie (BROUILLON / VALIDE).</td>
             </tr>
             <tr>
               <td><code>apps.nutritionist_queue</code></td>
@@ -1021,16 +1328,16 @@ stateDiagram-v2
             <tr>
               <td><code>apps.audit</code></td>
               <td><code>AuditLog</code></td>
-              <td>Piste d'audit médico-légale immuable (qui a consulté/modifié quel dossier et quand).</td>
+              <td>Piste d'audit médico-légale immuable (qui a consulté/modifié quel dossier et quand, traçabilité de l'Agent Hybride).</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- 8. FRONTEND WEB -->
+    <!-- 9. FRONTEND WEB -->
     <section id="frontend-web">
-      <h2 class="section-title">8. Architecture Frontend Web (React 19 / TypeScript)</h2>
+      <h2 class="section-title">9. Architecture Frontend Web (React 19 / TypeScript)</h2>
       <p>
         Le frontend web fournit des portails spécialisés adaptés aux contextes opérationnels de chaque profil d'utilisateur :
       </p>
@@ -1063,21 +1370,21 @@ stateDiagram-v2
             <tr>
               <td><strong>Portail Nutritionniste</strong></td>
               <td><code>NutritionistPortal.tsx</code></td>
-              <td>File de travail triée par urgence clinique, ajustement des objectifs, validation en 1 clic.</td>
+              <td>File de travail triée par urgence clinique, affichage complet des 14 variables FINDRISC + bilan métabolique, mode édition explicite du plan (bouton <em>Modifier le plan</em>), validation en 1 clic. <strong>Aucun rejet possible</strong> : modification permanente garantie.</td>
             </tr>
             <tr>
               <td><strong>Tableau de Bord Ministériel</strong></td>
               <td><code>MinistryAdminPortal.tsx</code></td>
-              <td>Statistiques territoriales agrégées, cartographie épidémiologique, ratios d'incidence.</td>
+              <td>8 KPIs épidémiologiques (patients, dépistages, score moyen, plans validés, <strong>pré-diabète</strong>, <strong>risque diminué</strong>, <strong>dépistages mobiles</strong>, <strong>suspicion diabète</strong>). Boutons <em>(i)</em> explicatifs sur chaque section. Cartographie territoriale avec indicateurs de priorité.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- 9. APPLICATION MOBILE EXPO -->
+    <!-- 10. APPLICATION MOBILE EXPO -->
     <section id="mobile-app">
-      <h2 class="section-title">9. Architecture Mobile (Expo / React Native)</h2>
+      <h2 class="section-title">10. Architecture Mobile (Expo / React Native)</h2>
       <p>
         L'application mobile citoyenne (<code>mobile/</code>) a été pensée pour un usage quotidien simple, intuitif et rassurant :
       </p>
@@ -1103,16 +1410,16 @@ stateDiagram-v2
       <h3 class="subsection-title">Organisation des 5 Onglets Natifs</h3>
       <ul>
         <li><strong>Dossier (index) :</strong> Fiche identité INS, Statut du dernier bilan avec CTA adaptatif, historique chronologique des évaluations.</li>
-        <li><strong>Mon Plan (plan) :</strong> Recommandations nutritionnelles et programme d'activité physique validés par le nutritionniste, avec encart de progression du jour.</li>
+        <li><strong>Mon Plan (plan) :</strong> Recommandations nutritionnelles et programme d'activité physique validés par le nutritionniste (générés initialement par l'Agent Hybride), avec encart de progression du jour.</li>
         <li><strong>Évaluation (autoeval) :</strong> Formulaire FINDRISC interactif en 3 étapes avec restitution immédiate du niveau de risque calculé.</li>
         <li><strong>Suivi (suivi) :</strong> Mini-calendrier rétrospectif 7 jours, coches individuelles par objectif nutritionnel (`objectifs_coches: number[]`) et validation de l'activité.</li>
         <li><strong>Alertes (notifications) :</strong> Notifications de rappel avec filtres par puces (🔬 Dépistage vs 📊 Suivi quotidien).</li>
       </ul>
     </section>
 
-    <!-- 10. INTEROPÉRABILITÉ FHIR -->
+    <!-- 11. INTEROPÉRABILITÉ FHIR -->
     <section id="interop-fhir">
-      <h2 class="section-title">10. Interopérabilité HL7 FHIR R4</h2>
+      <h2 class="section-title">11. Interopérabilité HL7 FHIR R4</h2>
       <p>
         WiQayati garantit une compatibilité native avec les systèmes hospitaliers et dossiers médicaux partagés nationaux 
         via le standard international <strong>HL7 FHIR R4</strong> :
@@ -1153,9 +1460,9 @@ stateDiagram-v2
       </div>
     </section>
 
-    <!-- 11. SÉCURITÉ & RBAC -->
+    <!-- 12. SÉCURITÉ & RBAC -->
     <section id="securite-rbac">
-      <h2 class="section-title">11. Sécurité, Rôles RBAC & Audit Trail</h2>
+      <h2 class="section-title">12. Sécurité, Rôles RBAC & Audit Trail</h2>
       <div class="table-container">
         <table>
           <thead>
@@ -1194,9 +1501,9 @@ stateDiagram-v2
       </div>
     </section>
 
-    <!-- 12. RUNBOOK & GUIDE D'EXPLOITATION -->
+    <!-- 13. RUNBOOK & GUIDE D'EXPLOITATION -->
     <section id="runbook">
-      <h2 class="section-title">12. Guide de Démarrage & Commandes d'Exploitation</h2>
+      <h2 class="section-title">13. Guide de Démarrage & Commandes d'Exploitation</h2>
       <p>
         Commandes canoniques pour exécuter l'ensemble de la pile technique en environnement de développement ou de test :
       </p>

@@ -16,8 +16,8 @@
 
 1. **L'identification unique des patients** grâce à l'Identifiant National de Santé (**INS**).
 2. **Le dépistage ciblé du diabète de type 2** à travers un questionnaire clinique standardisé administré par des agents de santé ou complété en auto-évaluation par les citoyens.
-3. **L'évaluation instantanée du risque** via un moteur de règles cliniques (score FINDRISC adapté au contexte épidémiologique et nutritionnel tunisien : *Faible*, *Intermédiaire*, *Élevé*).
-4. **La génération et la validation de plans de soins personnalisés** (nutrition méditerranéenne tunisienne + activité physique) par des nutritionnistes hospitaliers et de centres de référence.
+3. **L'évaluation instantanée du risque** via un moteur algorithmique/ML (score FINDRISC adapté au contexte épidémiologique et nutritionnel tunisien : *Faible*, *Intermédiaire*, *Élevé*).
+4. **La génération assistée par Agent Hybride (Formulaire + DMI)** : remplacement du moteur de règles statique (« engine ruler ») par un agent cognitif avec garde-fous cliniques déterministes, extrayant les antécédents, traitements et bilans du Dossier Médical Informatisé pour produire des plans personnalisés (nutrition méditerranéenne tunisienne + activité physique adaptée), certifiés par un nutritionniste.
 5. **La gestion d'une file d'attente prioritaire** pour les professionnels de santé (`STAT` pour risque élevé, `URGENT` pour intermédiaire, `ROUTINE` pour faible).
 6. **Le suivi citoyen sur mobile** (consultation des recommandations, historique, alertes et auto-évaluation).
 7. **Le pilotage épidémiologique ministériel** via un tableau de bord analytique par gouvernorat.
@@ -35,7 +35,7 @@ wiqayati/
 │   ├── apps/
 │   │   ├── accounts/         # Authentification unifiée, RBAC, profils, notifications
 │   │   ├── audit/            # Piste d'audit immuable, traçabilité des accès de santé
-│   │   ├── care_plan/        # Plans de soins nutrition & activité, validation clinique
+│   │   ├── care_plan/        # Plans de soins, client Agent Hybride (DMI + Formulaire) & repli règles
 │   │   ├── fhir_bridge/      # Client HAPI FHIR R4 & tâches asynchrones Celery
 │   │   ├── nutritionist_queue/# File de tri des priorités pour les nutritionnistes
 │   │   ├── risk_engine/      # Moteur algorithmique de calcul du risque diabétique
@@ -235,16 +235,22 @@ sequenceDiagram
     actor C as Citoyen (Patient)
     actor A as Agent de Terrain (CSP / Campagne)
     participant B as Backend Wiqayati & Moteur Risque
+    participant DMI as Connecteur DMI / FHIR
+    participant H as Agent Hybride (API Soins)
     actor N as Nutritionniste
     participant F as Serveur HL7 HAPI FHIR
 
     C->>A: Présentation avec INS (ex: TUN10001980)
-    A->>B: Saisie des constantes & réponses au questionnaire
-    B->>B: Calcul score FINDRISC (ex: 82/100 -> Risque ELEVE)
-    B->>B: Génération plan nutrition & activité physique
+    A->>B: Saisie des constantes & réponses au questionnaire (14 vars)
+    B->>B: Calcul score FINDRISC & probabilité dysglycémie
+    B->>DMI: Extraction antécédents, traitements & biologie (INS)
+    DMI-->>B: Données cliniques DMI
+    B->>H: POST /agent/generer-plan/ (Formulaire + DMI)
+    Note over H: NLP contextualisé + Guardrails cliniques
+    H-->>B: Plan nutrition & activité personnalisé (Brouillon)
     B->>N: Assignation tâche prioritaire STAT dans la file
     B--)F: Synchronisation asynchrone FHIR (Patient, QuestionnaireResponse)
-    N->>B: Consultation dossier, réajustement des notes & validation du plan
+    N->>B: Consultation justification IA, réajustement & validation
     B->>C: Notification push / alerte "Plan de soin validé"
     C->>B: Connexion mobile (INS + PIN) pour consulter son plan personnalisé
 ```

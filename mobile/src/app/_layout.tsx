@@ -4,7 +4,7 @@
  * conditionnelle (connexion / app principale).
  */
 import React from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Image } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '../api/authContext';
 import AppTabs from '../components/app-tabs';
@@ -27,6 +27,11 @@ function NavigateurPrincipal() {
   if (chargementInitial) {
     return (
       <View style={styles.splashContainer}>
+        <Image
+          source={require('../../assets/images/logo.png')}
+          style={{ width: 160, height: 160, marginBottom: 24 }}
+          resizeMode="contain"
+        />
         <ActivityIndicator size="large" color="#184E68" />
       </View>
     );
@@ -55,6 +60,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFFFFF',
   },
 });

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { HeartPulse, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
+import wiqayatiLogo from '../assets/logo.png';
 
 export const Navbar: React.FC = () => {
   const { utilisateur, estConnecte, deconnexion } = useAuth();
@@ -30,55 +31,12 @@ export const Navbar: React.FC = () => {
         }}
       >
         {/* Logo WiQayati */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
-          <div
-            style={{
-              backgroundColor: '#134B65',
-              color: '#FFFFFF',
-              width: '38px',
-              height: '38px',
-              borderRadius: '9px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(19, 75, 101, 0.22)',
-            }}
-          >
-            <HeartPulse size={22} />
-          </div>
-          <div>
-            <div
-              style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                color: '#0B2535',
-                letterSpacing: '-0.02em',
-                lineHeight: 1.1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              WiQayati
-              <span
-                style={{
-                  fontSize: '0.62rem',
-                  padding: '2px 5px',
-                  backgroundColor: '#1F8A70',
-                  color: '#FFFFFF',
-                  borderRadius: '3px',
-                  fontWeight: 700,
-                  letterSpacing: '0.03em',
-                }}
-              >
-                SANTÉ
-              </span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 500, marginTop: '1px' }}>
-              Dépistage & Prévention Diabète Type 2
-            </div>
-          </div>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <img
+            src={wiqayatiLogo}
+            alt="Wiqayati"
+            style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
+          />
         </Link>
 
         {/* Section utilisateur connecté */}

@@ -15,10 +15,13 @@ import {
   ScrollView,
   Animated,
   Easing,
+  Image,
 } from 'react-native';
 import { useAuth } from '../api/authContext';
 import { BASE_API_URL } from '../api/client';
 import { WiqayatiTokens } from '../constants/theme';
+
+const LOGO = require('../../assets/images/logo.png');
 
 interface ConnexionScreenProps {
   onRetour?: () => void;
@@ -83,9 +86,11 @@ export default function ConnexionScreen({ onRetour }: ConnexionScreenProps = {})
 
         {/* En-tête épuré */}
         <View style={styles.header}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>W</Text>
-          </View>
+          <Image
+            source={LOGO}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.appNom}>Wiqayati</Text>
         </View>
 
@@ -184,22 +189,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  logoCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: WiqayatiTokens.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: WiqayatiTokens.colors.surfaceHighlight,
-    ...WiqayatiTokens.shadows.elevated,
-  },
-  logoText: {
-    color: WiqayatiTokens.colors.textInverse,
-    fontSize: 34,
-    fontWeight: '900',
+  logoImage: {
+    width: 120,
+    height: 120,
+    marginBottom: 8,
   },
   appNom: {
     color: WiqayatiTokens.colors.textPrimary,

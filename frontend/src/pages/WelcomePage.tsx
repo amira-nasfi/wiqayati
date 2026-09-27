@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Activity,
   Sparkles,
-  HeartPulse,
   X,
   Info,
   HelpCircle,
@@ -14,7 +13,9 @@ import {
   Salad,
   LogIn,
   ArrowRight,
+  HeartPulse,
 } from 'lucide-react';
+import wiqayatiLogo from '../assets/logo.png';
 
 export const WelcomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -48,77 +49,46 @@ export const WelcomePage: React.FC = () => {
           scrollBehavior: 'smooth',
         }}
       >
-        {/* ── 1. HEADER NAVIGATION ── */}
+        {/* ── 1. HEADER NAVIGATION (Intégré dans le background) ── */}
         <header
           style={{
-            position: 'sticky',
+            position: 'absolute',
             top: 0,
+            left: 0,
+            right: 0,
             zIndex: 50,
             width: '100%',
-            backgroundColor: 'rgba(255, 255, 255, 0.94)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            borderBottom: '1px solid rgba(19, 75, 101, 0.08)',
-            padding: '1rem 3.5rem',
+            backgroundColor: 'transparent',
+            borderBottom: 'none',
+            padding: '1.2rem 3.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             boxSizing: 'border-box',
           }}
         >
-          {/* Logo WiQayati */}
+          {/* Logo WiQayati - Grand format en haut à gauche */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            <div
+            <img
+              src={wiqayatiLogo}
+              alt="Wiqayati"
               style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                backgroundColor: '#134B65',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                boxShadow: '0 3px 10px rgba(19, 75, 101, 0.2)',
+                height: '145px',
+                width: 'auto',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 4px 14px rgba(11, 37, 53, 0.08))',
               }}
-            >
-              <HeartPulse size={22} />
-            </div>
-            <div>
-              <div
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: '1.4rem',
-                  fontWeight: 800,
-                  color: '#0B2535',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                }}
-              >
-                WiQayati
-                <span
-                  style={{
-                    fontSize: '0.62rem',
-                    fontWeight: 700,
-                    backgroundColor: '#1F8A70',
-                    color: '#FFFFFF',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  SANTÉ
-                </span>
-              </div>
-              <div style={{ fontSize: '0.7rem', color: '#4A7186', fontWeight: 500, marginTop: '2px' }}>
-                Prévention du Diabète de Type 2
-              </div>
-            </div>
+            />
           </div>
 
           {/* Navigation Links & Bouton Se connecter */}
@@ -231,7 +201,7 @@ export const WelcomePage: React.FC = () => {
         <section
           style={{
             position: 'relative',
-            minHeight: 'calc(100vh - 75px)',
+            minHeight: '100vh',
             width: '100%',
             backgroundImage: 'url(/welcome-bg.png)',
             backgroundSize: 'cover',
@@ -240,7 +210,7 @@ export const WelcomePage: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'flex-end',
-            padding: '3rem 5rem',
+            padding: '6.5rem 5rem 3rem 5rem',
             boxSizing: 'border-box',
           }}
         >
@@ -253,6 +223,7 @@ export const WelcomePage: React.FC = () => {
               pointerEvents: 'none',
             }}
           />
+
 
           {/* Contenu textuel dans l'espace dégagé à droite */}
           <div

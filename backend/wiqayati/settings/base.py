@@ -186,10 +186,12 @@ CACHES = {
 FHIR_SERVER_URL = config('FHIR_SERVER_URL', default='http://localhost:8085/fhir')
 
 # ─── Moteur de risque ─────────────────────────────────────────────────────────
-# "internal://stub" → stub local
-# "http://..." → service externe (module IA du collègue)
-RISK_ENGINE_URL = config('RISK_ENGINE_URL', default='internal://stub')
+# "internal://ml"   → Moteur IA local in-process (FINDRISC + XGBoost NHANES) [recommandé]
+# "internal://stub" → Stub déterministe local (fallback / tests sans modèle ML)
+# "https://..."     → Service distant (microservice externe)
+RISK_ENGINE_URL = config('RISK_ENGINE_URL', default='internal://ml')
 RISK_ENGINE_VERSION_STUB = 'stub-1.0'
+RISK_ENGINE_VERSION_ML = 'wq-ml-1.0'
 
 # ─── Documentation API (drf-spectacular) ─────────────────────────────────────
 SPECTACULAR_SETTINGS = {

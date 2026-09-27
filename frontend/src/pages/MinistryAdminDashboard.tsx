@@ -15,6 +15,11 @@ import {
   RefreshCw,
   BarChart3,
   Layers,
+  Info,
+  Smartphone,
+  TrendingDown,
+  HeartPulse,
+  AlertCircle,
 } from 'lucide-react';
 import {
   PieChart,
@@ -95,6 +100,45 @@ export const MinistryAdminDashboard: React.FC = () => {
   const [ongletActif, setOngletActif] = useState<'epidemiologie' | 'territoires' | 'facteurs'>('epidemiologie');
   const [filtreGouvernorat, setFiltreGouvernorat] = useState<string>('TOUS');
   const [periodeSelectionnee, setPeriodeSelectionnee] = useState<string>('30_JOURS');
+  const [tooltipOuvert, setTooltipOuvert] = useState<string | null>(null);
+
+  // Composant (i) info tooltip inline
+  const InfoTooltip: React.FC<{ id: string; content: React.ReactNode }> = ({ id, content }) => (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        onClick={() => setTooltipOuvert(tooltipOuvert === id ? null : id)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: '20px', height: '20px', borderRadius: '50%',
+          border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC',
+          color: '#64748B', cursor: 'pointer', padding: 0,
+          transition: 'all 0.15s',
+        }}
+        title="En savoir plus"
+      >
+        <Info size={12} />
+      </button>
+      {tooltipOuvert === id && (
+        <>
+          <div
+            onClick={() => setTooltipOuvert(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 49 }}
+          />
+          <div style={{
+            position: 'absolute', bottom: '125%', left: '50%', transform: 'translateX(-50%)',
+            width: '300px', backgroundColor: '#0B2535', color: '#FFFFFF',
+            borderRadius: '10px', padding: '0.85rem 1rem',
+            boxShadow: '0 12px 32px rgba(11,37,53,0.35)',
+            fontSize: '0.8rem', lineHeight: 1.55, zIndex: 50,
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}>
+            <div style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)', width: '10px', height: '10px', backgroundColor: '#0B2535', borderRight: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', transform: 'translateX(-50%) rotate(45deg)' }} />
+            {content}
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   const chargerStats = async () => {
     setChargement(true);
@@ -388,6 +432,129 @@ export const MinistryAdminDashboard: React.FC = () => {
             <span>d'évaluation nutritionnelle</span>
           </div>
         </div>
+
+        {/* KPI 5 : Pré-diabète */}
+        <div className="bi-kpi-card" style={{ borderTop: '3px solid #B45309' }}>
+          <div>
+            <div className="bi-kpi-top">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="bi-kpi-label">Pré-diabétiques Identifiés</span>
+                <InfoTooltip id="prediabete" content={
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#93C5FD' }}>Pré-diabète — Définition OMS</div>
+                    Glycémie à jeun entre <strong>1,00 et 1,25 g/L</strong> (5,6–6,9 mmol/L) ou acanthosis nigricans associé à un IMC ≥ 28.<br /><br />
+                    <span style={{ color: '#86EFAC' }}>✔ 70% des prédiabètes peuvent être normalisés par l'hygiène de vie si détectés à temps.</span>
+                  </>
+                } />
+              </div>
+              <div className="bi-kpi-icon" style={{ backgroundColor: '#FEF3C7', color: '#B45309' }}>
+                <HeartPulse size={17} />
+              </div>
+            </div>
+            <div className="bi-kpi-value" style={{ color: '#B45309' }}>
+              {apercu?.nb_prediabete || 0}
+              <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 500, marginLeft: '6px' }}>cas</span>
+            </div>
+          </div>
+          <div className="bi-kpi-footer">
+            <span style={{ color: '#B45309', fontWeight: 700 }}>
+              {apercu?.taux_prediabete_pct || 0}%
+            </span>
+            <span>de la cohorte dépistée</span>
+          </div>
+        </div>
+
+        {/* KPI 6 : Risque diminué */}
+        <div className="bi-kpi-card" style={{ borderTop: '3px solid #2A9D8F' }}>
+          <div>
+            <div className="bi-kpi-top">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="bi-kpi-label">Personnes à Risque Réduit</span>
+                <InfoTooltip id="risque-diminue" content={
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#86EFAC' }}>KPI d'Efficacité Préventive N°1</div>
+                    Patients ayant effectué ≥ 2 dépistages dont le <strong>score FINDRISC le plus récent est strictement inférieur</strong> au score initial.<br /><br />
+                    Prouve l'impact réel de WiQayati sur la trajectoire épidémiologique.
+                  </>
+                } />
+              </div>
+              <div className="bi-kpi-icon" style={{ backgroundColor: '#DCFCE7', color: '#15803D' }}>
+                <TrendingDown size={17} />
+              </div>
+            </div>
+            <div className="bi-kpi-value" style={{ color: '#15803D' }}>
+              {apercu?.nb_personnes_risque_diminue || 0}
+              <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 500, marginLeft: '6px' }}>personnes</span>
+            </div>
+          </div>
+          <div className="bi-kpi-footer">
+            <span style={{ color: '#2A9D8F', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>
+              <ArrowUpRight size={14} /> {apercu?.taux_amelioration_risque_pct || 0}%
+            </span>
+            <span>des patients en suivi</span>
+          </div>
+        </div>
+
+        {/* KPI 7 : Dépistages mobiles */}
+        <div className="bi-kpi-card" style={{ borderTop: '3px solid #3B7A99' }}>
+          <div>
+            <div className="bi-kpi-top">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="bi-kpi-label">Dépistages via App Mobile</span>
+                <InfoTooltip id="mobile" content={
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#93C5FD' }}>Adoption Mobile Citoyenne</div>
+                    Dépistages effectués en <strong>auto-évaluation</strong> par les citoyens via l'application WiQayati (sans agent de terrain).<br /><br />
+                    Mesure l'autonomie citoyenne et la pénétration de l'application en population générale.
+                  </>
+                } />
+              </div>
+              <div className="bi-kpi-icon" style={{ backgroundColor: '#EDF6F8', color: '#3B7A99' }}>
+                <Smartphone size={17} />
+              </div>
+            </div>
+            <div className="bi-kpi-value">
+              {apercu?.canaux_depistage?.mobile || 0}
+              <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 500, marginLeft: '6px' }}>auto-évals</span>
+            </div>
+          </div>
+          <div className="bi-kpi-footer">
+            <span style={{ color: '#3B7A99', fontWeight: 700 }}>
+              {apercu?.canaux_depistage?.part_mobile_pct || 0}%
+            </span>
+            <span>du total dépistages</span>
+          </div>
+        </div>
+
+        {/* KPI 8 : Suspicion diabète non diagnostiqué */}
+        <div className="bi-kpi-card" style={{ borderTop: '3px solid #991B1B' }}>
+          <div>
+            <div className="bi-kpi-top">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="bi-kpi-label">Suspicion Diabète Non-Diagnostiqué</span>
+                <InfoTooltip id="hyperglycemie" content={
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#FCA5A5' }}>Alerte Diabète Avéré</div>
+                    Patients avec glycémie à jeun <strong>≥ 1,26 g/L (7,0 mmol/L)</strong> : seuil de diagnostic du diabète selon OMS/STE.<br /><br />
+                    <span style={{ color: '#FCA5A5' }}>⚠ Ces personnes nécessitent une consultation médicale urgente pour confirmation biologique.</span>
+                  </>
+                } />
+              </div>
+              <div className="bi-kpi-icon" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+                <AlertCircle size={17} />
+              </div>
+            </div>
+            <div className="bi-kpi-value" style={{ color: '#991B1B' }}>
+              {apercu?.statistiques_diabete?.cas_hyperglycemie_severe || 0}
+              <span style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: 500, marginLeft: '6px' }}>cas</span>
+            </div>
+          </div>
+          <div className="bi-kpi-footer">
+            <span style={{ color: '#991B1B', fontWeight: 700 }}>
+              Consultation urgente requise
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* ── NAVIGATION PAR ONGLETS ANALYTIQUES ── */}
@@ -428,6 +595,14 @@ export const MinistryAdminDashboard: React.FC = () => {
                   <div className="card-title">
                     <PieIcon size={18} color="#134B65" />
                     <span>Répartition des Niveaux de Risque</span>
+                    <InfoTooltip id="repartition" content={
+                      <>
+                        <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#93C5FD' }}>Stratification FINDRISC — Signification Clinique</div>
+                        <div style={{ marginBottom: '6px' }}><strong style={{ color: '#2A9D8F' }}>Risque Faible (&lt;30 pts)</strong> : Probabilité ~1% de diabète T2 à 10 ans. Maintien de l'hygiène de vie, réévaluation 12 mois.</div>
+                        <div style={{ marginBottom: '6px' }}><strong style={{ color: '#3B7A99' }}>Risque Modéré (30–59 pts)</strong> : Probabilité 4–17% à 10 ans. Suivi préventif actif, rééquilibrage alimentaire méditerranéen.</div>
+                        <div><strong style={{ color: '#FCA5A5' }}>Risque Élevé (≥60 pts)</strong> : Probabilité &gt;33% (jusqu'à 50%). Prise en charge STAT, bilan biologique et avis médical requis.</div>
+                      </>
+                    } />
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>
                     Ventilation clinique des {totalEvaluations} évaluations
@@ -635,6 +810,13 @@ export const MinistryAdminDashboard: React.FC = () => {
               <div className="card-title">
                 <MapPin size={18} color="#134B65" />
                 <span>Indicateurs Détaillés par Gouvernorat</span>
+                <InfoTooltip id="cartographie" content={
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#93C5FD' }}>Cartographie Régionale — Bonne Pratique</div>
+                    Pour éviter le biais démographique, privilégier une lecture en <strong>taux pour 10 000 habitants</strong> (Tunis et Sfax ont des populations 3× plus grandes que les gouvernorats sud).<br /><br />
+                    Un gouvernorat est qualifié de <strong style={{ color: '#FCA5A5' }}>prioritaire</strong> si son taux de risque élevé dépasse 30% des dépistés.
+                  </>
+                } />
               </div>
               <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>
                 Données épidémiologiques et niveau de priorité de santé publique
@@ -752,6 +934,13 @@ export const MinistryAdminDashboard: React.FC = () => {
               <div className="card-title">
                 <Activity size={18} color="#134B65" />
                 <span>Prévalence des Déterminants Déclarés (FINDRISC)</span>
+                <InfoTooltip id="facteurs-risque" content={
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#93C5FD' }}>Déterminants FINDRISC — Source &amp; Fiabilité</div>
+                    Ces fréquences sont calculées sur les <strong>réponses déclaratives</strong> au questionnaire de 14 variables. Elles reflètent la prévalence des facteurs dans la cohorte dépistée, non en population générale.<br /><br />
+                    <span style={{ color: '#86EFAC' }}>✔ Un déterminant est qualifié de <strong>majeur</strong> si sa prévalence dépasse 40% de la cohorte.</span>
+                  </>
+                } />
               </div>
               <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>
                 Fréquence des facteurs étiologiques dans la population générale dépistée

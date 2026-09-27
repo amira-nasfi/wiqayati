@@ -1,9 +1,17 @@
 """
 Service et client du moteur de calcul du risque de diabète de type 2.
 Respecte scrupuleusement le contrat d'interface figé v1.0 (packages/shared/risk-engine-contract.json).
+
+Modes disponibles via settings.RISK_ENGINE_URL :
+  - 'internal://stub'   → Stub déterministe local (défaut de sécurité)
+  - 'internal://ml'     → Moteur IA ML local (FINDRISC + XGBoost NHANES)
+  - 'https://...'       → Service distant (appel HTTP)
 """
 import uuid
+import os
+import sys
 import logging
+import warnings
 from typing import Dict, Any, List
 from django.conf import settings
 from django.utils import timezone
@@ -11,11 +19,15 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# Chemin absolu vers le sous-répertoire ml/ contenant le moteur IA
+_ML_DIR = os.path.join(os.path.dirname(__file__), "ml")
+
 
 class ServiceStubMoteurRisque:
     """
     Implémentation déterministe locale du moteur de risque (stub-1.0).
     Exécuté en local lorsque RISK_ENGINE_URL='internal://stub'.
+    Sert aussi de fallback automatique si le moteur ML échoue.
     """
     VERSION_MOTEUR = "stub-1.0"
 
@@ -171,11 +183,132 @@ class ServiceStubMoteurRisque:
         }
 
 
+class ServiceMLMoteurRisque:
+    """
+    Moteur de risque IA in-process basé sur :
+      - FINDRISC (score clinique, risque à 10 ans)
+      - DIABSCORE (score bioclinique de pré-diabète)
+      - Détecteur XGBoost + Calibration Isotonique (dysglycémie actuelle)
+    Lit les fichiers modèles depuis apps/risk_engine/ml/model/
+    Effectue un fallback automatique sur le stub en cas d'erreur.
+    """
+    VERSION_MOTEUR = "wq-ml-1.0"
+    _adapter = None
+
+    @classmethod
+    def _load_adapter(cls):
+        """Import lazy du module wq_adapter (évite les imports au démarrage Django)."""
+        if cls._adapter is not None:
+            return cls._adapter
+
+        if _ML_DIR not in sys.path:
+            sys.path.insert(0, _ML_DIR)
+
+        # Supprimer les InconsistentVersionWarnings de sklearn (version mismatch mineur)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+            import importlib
+            adapter = importlib.import_module("wq_adapter")
+
+        cls._adapter = adapter
+        logger.info("Moteur IA Diabète (wq-ml-1.0) chargé depuis %s", _ML_DIR)
+        return cls._adapter
+
+    @classmethod
+    def _sanitize(cls, obj):
+        """
+        Nettoie récursivement les types non-JSON-sérialisables (ex: Ellipsis, np.float64).
+        """
+        if obj is ...:
+            return None
+        if isinstance(obj, dict):
+            return {k: cls._sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [cls._sanitize(i) for i in obj]
+        # numpy scalars → python native
+        try:
+            import numpy as np
+            if isinstance(obj, np.integer):
+                return int(obj)
+            if isinstance(obj, np.floating):
+                return float(obj)
+            if isinstance(obj, np.bool_):
+                return bool(obj)
+        except ImportError:
+            pass
+        return obj
+
+    @classmethod
+    def evaluer(cls, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Évalue le risque de diabète via le moteur IA ML.
+        Retourne une réponse conforme au contrat v1.0 + clé _supplement avec
+        les données enrichies (FINDRISC, DIABSCORE, probabilité détecteur ML).
+        """
+        try:
+            adapter = cls._load_adapter()
+            # Changer temporairement le CWD pour que les chemins relatifs model/ fonctionnent
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(_ML_DIR)
+                result = adapter.run_pipeline(payload)
+            finally:
+                os.chdir(original_cwd)
+
+            return cls._sanitize(result)
+
+        except Exception as exc:
+            logger.exception(
+                "Erreur du moteur IA ML (wq-ml-1.0), basculement sur le stub: %s", exc
+            )
+            return None  # Signal de fallback pour ClientMoteurRisque
+
+
+class ServiceProtocoleML:
+    """
+    Génère un protocole de soins personnalisé via protocol_engine.py.
+    Utilisé par apps.care_plan pour enrichir les plans de soins.
+    """
+
+    @classmethod
+    def generer_protocole(cls, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Retourne le protocole complet avec items d'activité, recommandations
+        nutritionnelles, urgences et critères d'orientation médicale.
+        """
+        try:
+            if _ML_DIR not in sys.path:
+                sys.path.insert(0, _ML_DIR)
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+                import importlib
+                adapter = importlib.import_module("wq_adapter")
+
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(_ML_DIR)
+                result = adapter.generate_wiqayati_protocol(payload)
+            finally:
+                os.chdir(original_cwd)
+
+            return ServiceMLMoteurRisque._sanitize(result)
+
+        except Exception as exc:
+            logger.exception("Erreur génération protocole ML: %s", exc)
+            return None
+
+
 class ClientMoteurRisque:
     """
     Client de haut niveau pour l'évaluation de risque.
-    Bascule de manière transparente entre le stub local et le service externe IA
-    selon la valeur de settings.RISK_ENGINE_URL.
+    Bascule de manière transparente entre les moteurs :
+      1. internal://ml   → Moteur IA ML local (recommandé)
+      2. internal://stub → Stub déterministe (fallback ou développement)
+      3. https://...     → Service distant
+
+    En cas d'échec du moteur ML ou du service distant, bascule
+    automatiquement et silencieusement sur le stub.
     """
 
     @classmethod
@@ -191,12 +324,26 @@ class ClientMoteurRisque:
             "contexte": contexte
         }
 
-        url = getattr(settings, 'RISK_ENGINE_URL', 'internal://stub')
+        url = getattr(settings, 'RISK_ENGINE_URL', 'internal://ml')
 
+        # --- Mode ML local ---
+        if url == 'internal://ml':
+            result = ServiceMLMoteurRisque.evaluer(payload)
+            if result is not None:
+                logger.info(
+                    "Évaluation ML OK | ins=%s | score=%.1f | niveau=%s",
+                    ins_patient, result.get("score", 0), result.get("niveau_risque")
+                )
+                return result
+            # Fallback silencieux sur le stub
+            logger.warning("Basculement sur stub (moteur ML indisponible) pour ins=%s", ins_patient)
+            return ServiceStubMoteurRisque.evaluer(payload)
+
+        # --- Mode stub local ---
         if not url or url == 'internal://stub':
             return ServiceStubMoteurRisque.evaluer(payload)
 
-        # Appel distant vers le module IA externe
+        # --- Mode service distant ---
         try:
             endpoint = url.rstrip('/') + '/risk-engine/evaluer'
             response = requests.post(endpoint, json=payload, timeout=3.0)

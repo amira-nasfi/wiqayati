@@ -17,7 +17,9 @@ class ProfilUtilisateurSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'prenom', 'nom',
             'role', 'role_libelle', 'is_active', 'expire_le',
-            'gouvernorat', 'mot_de_passe_temporaire', 'derniere_connexion_le'
+            'gouvernorat', 'structure_nom', 'structure_localisation',
+            'structure_code', 'responsable_structure', 'campagne_date_fin',
+            'mot_de_passe_temporaire', 'derniere_connexion_le'
         ]
         read_only_fields = ['id', 'username', 'role', 'role_libelle', 'expire_le', 'derniere_connexion_le']
 
@@ -58,6 +60,11 @@ class ConnexionSerializer(TokenObtainPairSerializer):
             'role': self.user.role,
             'role_libelle': self.user.get_role_display(),
             'gouvernorat': self.user.gouvernorat,
+            'structure_nom': self.user.structure_nom,
+            'structure_localisation': self.user.structure_localisation,
+            'structure_code': self.user.structure_code,
+            'responsable_structure': self.user.responsable_structure,
+            'campagne_date_fin': self.user.campagne_date_fin.isoformat() if self.user.campagne_date_fin else None,
             'expire_le': self.user.expire_le.isoformat() if self.user.expire_le else None,
             'mot_de_passe_temporaire': self.user.mot_de_passe_temporaire,
         }

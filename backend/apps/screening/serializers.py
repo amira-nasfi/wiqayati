@@ -14,11 +14,22 @@ class ProfilPatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfilPatient
         fields = [
-            'id', 'ins', 'prenom', 'nom', 'date_naissance',
+            'id', 'ins', 'cin', 'prenom', 'nom', 'date_naissance',
             'genre', 'telephone', 'gouvernorat',
             'fhir_resource_id', 'cree_le', 'modifie_le'
         ]
         read_only_fields = ['id', 'fhir_resource_id', 'cree_le', 'modifie_le']
+
+    def validate_cin(self, value):
+        if not value:
+            return value
+        cin_clean = value.strip()
+        # CIN tunisien : 8 chiffres (ou document alphanumérique)
+        if not re.match(r'^[A-Z0-9]{6,12}$', cin_clean, re.IGNORECASE):
+            raise serializers.ValidationError(
+                _("Le numéro CIN doit comporter 8 chiffres (ou identifiant valide de 6 à 12 caractères).")
+            )
+        return cin_clean
 
     def validate_ins(self, value):
         ins_clean = value.strip().upper()

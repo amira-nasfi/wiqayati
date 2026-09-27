@@ -19,7 +19,7 @@ from .questionnaire_definitions import DEFINITION_QUESTIONNAIRE_V1
 
 from apps.accounts.permissions import EstAgent
 from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
-from apps.risk_engine.services import ClientMoteurRisque
+from apps.risk_engine.services import ClientMoteurRisque, ServiceProtocoleML
 from apps.care_plan.models import PlanSoin, StatutPlan
 from apps.care_plan.services import GenerateurPlanSoin
 from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache, StatutTache
@@ -27,24 +27,45 @@ from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache, S
 logger = logging.getLogger(__name__)
 
 
+def _generer_ins_unique():
+    """Génère un INS unique tunisien au format TUN{ANNEE}{7_CHIFFRES}."""
+    import random
+    annee = timezone.now().year % 100
+    while True:
+        chiffres = random.randint(1000000, 9999999)
+        ins = f"TUN{annee}{chiffres}"
+        if not ProfilPatient.objects.filter(ins=ins).exists():
+            return ins
+
+
 class RecherchePatientView(APIView):
     """
-    GET /api/v1/patients/recherche/?ins={ins}
-    Permet à un agent de rechercher un patient existant par son INS.
-    Retourne le profil et l'historique complet des évaluations.
+    GET /api/v1/patients/recherche/?cin={cin}&date_naissance={date_naissance} (ou ?ins={ins})
+    Recherche un patient existant prioritairement par son CIN et sa date de naissance, ou par son INS.
+    Retourne le profil complet (avec l'INS mis en avant) et l'historique des dépistages.
     """
     permission_classes = [EstAgent]
 
     def get(self, request):
+        cin = request.query_params.get('cin', '').strip()
+        date_naissance = request.query_params.get('date_naissance', '').strip()
         ins = request.query_params.get('ins', '').strip().upper()
-        if not ins:
+
+        patient = None
+        if cin:
+            qs = ProfilPatient.objects.filter(cin=cin)
+            if date_naissance:
+                qs = qs.filter(date_naissance=date_naissance)
+            patient = qs.first()
+        elif ins:
+            patient = ProfilPatient.objects.filter(ins=ins).first()
+        else:
             return Response(
-                {'erreur': _("Le paramètre INS est obligatoire.")},
+                {'erreur': _("Veuillez renseigner le CIN et la date de naissance (ou l'INS).")},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            patient = ProfilPatient.objects.get(ins=ins)
+        if patient:
             patient_serializer = ProfilPatientSerializer(patient)
             historique = ReponseScreening.objects.filter(patient=patient).select_related('evaluation_risque')
             historique_serializer = ReponseScreeningSerializer(historique, many=True)
@@ -54,25 +75,36 @@ class RecherchePatientView(APIView):
                 'patient': patient_serializer.data,
                 'historique_screenings': historique_serializer.data
             })
-        except ProfilPatient.DoesNotExist:
-            return Response(
-                {
-                    'trouve': False,
-                    'message': _("Aucun dossier existant pour cet INS. Veuillez créer la fiche patient.")
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
+
+        return Response(
+            {
+                'trouve': False,
+                'message': _("Aucun dossier existant avec ces identifiants. Vous pouvez créer la fiche patient ci-dessous.")
+            },
+            status=status.HTTP_404_NOT_FOUND
+        )
 
 
 class CreationPatientView(APIView):
     """
     POST /api/v1/patients/
-    Crée un nouveau profil patient identifié par son INS uniquement s'il n'existe pas déjà.
+    Crée un nouveau profil patient avec CIN et génération automatique d'un INS unique si non fourni.
     """
     permission_classes = [EstAgent]
 
     def post(self, request):
-        serializer = ProfilPatientSerializer(data=request.data)
+        data = request.data.copy()
+        if not data.get('ins'):
+            data['ins'] = _generer_ins_unique()
+
+        cin = data.get('cin', '').strip() if data.get('cin') else None
+        if cin and ProfilPatient.objects.filter(cin=cin).exists():
+            return Response(
+                {'erreur': _("Un dossier patient avec ce numéro CIN existe déjà dans le système central.")},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        serializer = ProfilPatientSerializer(data=data)
         if serializer.is_valid():
             ins = serializer.validated_data['ins']
             if ProfilPatient.objects.filter(ins=ins).exists():
@@ -168,10 +200,32 @@ class SoumissionScreeningView(APIView):
             version_moteur=res_moteur.get("version_moteur", "stub-1.0")
         )
 
-        # 4. Génération du plan de soin (statut BROUILLON)
+        # 4. Génération du protocole ML (si disponible) pour enrichir le plan de soin
+        protocole_ml = None
+        payload_protocole = {
+            "request_id": str(evaluation.id),
+            "ins_patient": ins_patient,
+            "version_questionnaire": "1.0",
+            "donnees_questionnaire": donnees,
+            "contexte": contexte
+        }
+        try:
+            protocole_ml = ServiceProtocoleML.generer_protocole(payload_protocole)
+            if protocole_ml:
+                logger.info(
+                    "Protocole ML généré OK | ins=%s | urgent=%s | referral=%s",
+                    ins_patient,
+                    protocole_ml.get("urgent_flags", []),
+                    protocole_ml.get("requires_medical_referral", False)
+                )
+        except Exception as exc:
+            logger.warning("Protocole ML non disponible, fallback statique: %s", exc)
+
+        # 5. Génération du plan de soin (statut BROUILLON)
         nutrition, activite = GenerateurPlanSoin.generer_plans(
             niveau_risqu=evaluation.niveau_risque,
-            facteurs=evaluation.facteurs
+            facteurs=evaluation.facteurs,
+            protocole_ml=protocole_ml
         )
 
         plan = PlanSoin.objects.create(
@@ -182,7 +236,7 @@ class SoumissionScreeningView(APIView):
             statut=StatutPlan.BROUILLON
         )
 
-        # 5. Création de la tâche nutritionniste ordonnancée
+        # 6. Création de la tâche nutritionniste ordonnancée
         priorite_map = {
             NiveauRisque.ELEVE: PrioriteTache.STAT,
             NiveauRisque.INTERMEDIAIRE: PrioriteTache.URGENT,
@@ -196,7 +250,7 @@ class SoumissionScreeningView(APIView):
             statut=StatutTache.DEMANDE
         )
 
-        # 6. Déclenchement de la synchronisation asynchrone FHIR (si Celery dispo)
+        # 7. Déclenchement de la synchronisation asynchrone FHIR (si Celery dispo)
         try:
             from apps.fhir_bridge.tasks import synchroniser_dossier_complet_fhir
             synchroniser_dossier_complet_fhir.delay(
@@ -206,6 +260,28 @@ class SoumissionScreeningView(APIView):
             logger.warning("Notification Celery FHIR différée : %s", exc)
 
         # Réponse immédiate complète
+        # Construit le bloc ml_supplement depuis le résultat du moteur IA
+        supplement = res_moteur.get("_supplement", {})
+        ml_supplement = None
+        if supplement:
+            findrisc = supplement.get("findrisc", {})
+            diabscore = supplement.get("diabscore", {})
+            detecteur = supplement.get("detector", {})
+            referral = supplement.get("referral", {})
+            ml_supplement = {
+                "findrisc_score": findrisc.get("score"),
+                "findrisc_band": findrisc.get("band"),
+                "risque_10_ans_pct": findrisc.get("ten_year_risk_pct"),
+                "diabscore": diabscore.get("score"),
+                "prediabete_flag": diabscore.get("prediabetes_flag"),
+                "probabilite_dysglycemie": detecteur.get("probability"),
+                "dysglycemie_detectee": detecteur.get("flagged"),
+                "statut_clinique": supplement.get("status"),
+                "orientation_medicale": referral,
+                "urgent_flags": protocole_ml.get("urgent_flags", []) if protocole_ml else [],
+                "requires_medical_referral": protocole_ml.get("requires_medical_referral", False) if protocole_ml else False,
+            }
+
         return Response({
             'id_soumission': str(reponse.id),
             'patient': {
@@ -220,7 +296,19 @@ class SoumissionScreeningView(APIView):
                 'niveau_risque_libelle': evaluation.get_niveau_risque_display(),
                 'score': evaluation.score,
                 'facteurs': evaluation.facteurs,
-                'version_moteur': evaluation.version_moteur
+                'version_moteur': evaluation.version_moteur,
+                'ml_supplement': ml_supplement,
+            },
+            'ml_supplement': ml_supplement,
+            'plan_soin': {
+                'id': str(plan.id),
+                'statut': plan.statut,
+                'statut_libelle': plan.get_statut_display(),
+                'plan_nutrition': plan.plan_nutrition,
+                'plan_activite': plan.plan_activite,
+                'notes_nutritionniste': plan.notes_nutritionniste,
+                'requires_medical_referral': bool(protocole_ml and protocole_ml.get('requires_medical_referral')),
+                'urgent_flags': protocole_ml.get('urgent_flags', []) if protocole_ml else [],
             },
             'plan_soin_id': str(plan.id),
             'statut_plan': plan.statut,

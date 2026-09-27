@@ -1,0 +1,39 @@
+{
+  "features": [
+    "diabscore",
+    "bmi",
+    "whtr",
+    "sbp",
+    "sex_male",
+    "inactive_yes",
+    "bp_meds_yes",
+    "htn_yes",
+    "smoker_now",
+    "high_glucose_hist"
+  ],
+  "numeric_features": [
+    "diabscore",
+    "bmi",
+    "whtr",
+    "sbp"
+  ],
+  "binary_features": [
+    "sex_male",
+    "inactive_yes",
+    "bp_meds_yes",
+    "htn_yes",
+    "smoker_now",
+    "high_glucose_hist"
+  ],
+  "threshold": 0.3258,
+  "threshold_source": "validation split, recall target 90%",
+  "auc": 0.737,
+  "pr_auc": 0.674,
+  "brier": 0.2074,
+  "prevalence": 0.4645,
+  "nns": 1.8,
+  "hl_p": 0.021,
+  "target": "dysglycemia (HbA1c>=5.7 or FPG>=100)",
+  "model": "L2 LogisticRegression (C=0.1) + isotonic calibration on val",
+  "note": "detects CURRENT prediabetes or undiagnosed T2D. Known diabetics are excluded at training time. For 10-year risk use risk_engine.py (FINDRISC)."
+}

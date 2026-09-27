@@ -13,7 +13,7 @@ from apps.accounts.permissions import EstCitoyen
 from apps.accounts.models import CompteUtilisateur, Role
 from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumission
 from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
-from apps.risk_engine.services import ClientMoteurRisque
+from apps.risk_engine.services import ClientMoteurRisque, ServiceProtocoleML
 from apps.care_plan.models import PlanSoin, StatutPlan
 from apps.care_plan.services import GenerateurPlanSoin
 from apps.nutritionist_queue.models import TacheNutritionniste, PrioriteTache, StatutTache
@@ -239,9 +239,13 @@ class CitoyenAutoEvaluationView(APIView):
             version_moteur=res_moteur.get("version_moteur", "stub-1.0")
         )
 
+        # Génération du protocole personnalisé via le moteur ML/règles
+        protocole_ml = ServiceProtocoleML.generer_protocole(donnees)
+
         nutrition, activite = GenerateurPlanSoin.generer_plans(
             niveau_risqu=evaluation.niveau_risque,
-            facteurs=evaluation.facteurs
+            facteurs=evaluation.facteurs,
+            protocole_ml=protocole_ml,
         )
 
         plan = PlanSoin.objects.create(
@@ -249,7 +253,9 @@ class CitoyenAutoEvaluationView(APIView):
             evaluation_risque=evaluation,
             plan_nutrition=nutrition,
             plan_activite=activite,
-            statut=StatutPlan.BROUILLON
+            statut=StatutPlan.BROUILLON,
+            requires_medical_referral=bool(protocole_ml and protocole_ml.get('requires_medical_referral')),
+            urgent_flags=protocole_ml.get('urgent_flags', []) if protocole_ml else [],
         )
 
         priorite_map = {
@@ -265,6 +271,21 @@ class CitoyenAutoEvaluationView(APIView):
             statut=StatutTache.DEMANDE
         )
 
+        supplement = res_moteur.get('_supplement') or {}
+        findrisc = supplement.get("findrisc", {}) if supplement else {}
+        detecteur = supplement.get("detector", {}) if supplement else {}
+        referral = supplement.get("referral", {}) if supplement else {}
+
+        ml_supplement = {
+            "findrisc_score": findrisc.get("score") if findrisc else (protocole_ml.get("findrisc_score") if protocole_ml else None),
+            "risque_10_ans_pct": findrisc.get("ten_year_risk_pct") if findrisc else (protocole_ml.get("findrisc_10y_risk_pct") if protocole_ml else None),
+            "probabilite_dysglycemie": detecteur.get("probability") if detecteur else (protocole_ml.get("dysglycemia_ml_probability") if protocole_ml else None),
+            "dysglycemie_detectee": detecteur.get("flagged") if detecteur else (protocole_ml.get("dysglycemia_flag", False) if protocole_ml else False),
+            "orientation_medicale": referral or (protocole_ml.get("medical_referral") if protocole_ml else None),
+            "requires_medical_referral": bool(protocole_ml and protocole_ml.get("requires_medical_referral")),
+            "urgent_flags": protocole_ml.get("urgent_flags", []) if protocole_ml else [],
+        }
+
         return Response({
             'message': _(
                 "Votre auto-évaluation a été enregistrée avec succès. "
@@ -276,5 +297,17 @@ class CitoyenAutoEvaluationView(APIView):
                 'niveau_risque_libelle': evaluation.get_niveau_risque_display(),
                 'score': evaluation.score,
                 'facteurs': evaluation.facteurs
+            },
+            'ml_supplement': ml_supplement,
+            'plan_soin': {
+                'id': str(plan.id),
+                'statut': plan.statut,
+                'statut_libelle': plan.get_statut_display(),
+                'plan_nutrition': plan.plan_nutrition,
+                'plan_activite': plan.plan_activite,
+                'notes_nutritionniste': plan.notes_nutritionniste,
+                'requires_medical_referral': bool(protocole_ml and protocole_ml.get("requires_medical_referral")),
+                'urgent_flags': protocole_ml.get("urgent_flags", []) if protocole_ml else [],
             }
         }, status=status.HTTP_201_CREATED)
+
