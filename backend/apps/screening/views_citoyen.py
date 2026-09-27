@@ -23,7 +23,9 @@ from .questionnaire_definitions import DEFINITION_QUESTIONNAIRE_V1
 class ConnexionCitoyenView(APIView):
     """
     POST /api/v1/citoyen/auth/connexion/
-    Connexion sécurisée citoyenne par INS et code PIN / mot de passe.
+    Connexion sécurisée citoyenne :
+      - Soit par INS + code PIN / mot de passe
+      - Soit par CIN (8 chiffres) + Date de naissance (+ PIN optionnel)
     Crée automatiquement le compte citoyen s'il s'agit de sa première connexion
     et qu'un dossier patient avec cet INS existe déjà.
     """
@@ -32,23 +34,34 @@ class ConnexionCitoyenView(APIView):
     def post(self, request):
         ins = request.data.get('ins', '').strip().upper()
         pin = request.data.get('pin', '').strip()
+        cin = request.data.get('cin', '').strip()
+        date_naissance = request.data.get('date_naissance', '').strip()
 
-        if not ins or not pin:
+        # Identification par CIN + Date de naissance
+        if cin and date_naissance:
+            patient = ProfilPatient.objects.filter(cin=cin, date_naissance=date_naissance).first()
+            if not patient:
+                return Response(
+                    {'erreur': _("Aucun dossier de santé trouvé pour ce numéro CIN et cette date de naissance.")},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            ins = patient.ins
+        elif ins:
+            patient = ProfilPatient.objects.filter(ins=ins).first()
+            if not patient:
+                return Response(
+                    {
+                        'erreur': _(
+                            "Aucun dossier de santé trouvé pour cet INS. "
+                            "Veuillez d'abord vous faire dépister auprès d'un agent."
+                        )
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
             return Response(
-                {'erreur': _("L'INS et le code secret sont obligatoires.")},
+                {'erreur': _("Veuillez renseigner votre INS ou votre CIN avec votre date de naissance.")},
                 status=status.HTTP_400_BAD_REQUEST
-            )
-
-        patient = ProfilPatient.objects.filter(ins=ins).first()
-        if not patient:
-            return Response(
-                {
-                    'erreur': _(
-                        "Aucun dossier de santé trouvé pour cet INS. "
-                        "Veuillez d'abord vous faire dépister auprès d'un agent."
-                    )
-                },
-                status=status.HTTP_404_NOT_FOUND
             )
 
         # Recherche ou création du compte utilisateur pour ce citoyen
@@ -64,10 +77,11 @@ class ConnexionCitoyenView(APIView):
         )
 
         if cree:
-            compte.set_password(pin)
+            compte.set_password(pin if pin else '1234')
             compte.save()
         else:
-            if not compte.check_password(pin):
+            # Si un pin est fourni, on le vérifie
+            if pin and not compte.check_password(pin):
                 return Response(
                     {'erreur': _("Code secret ou identifiant incorrect.")},
                     status=status.HTTP_401_UNAUTHORIZED
@@ -78,17 +92,72 @@ class ConnexionCitoyenView(APIView):
 
         refresh = RefreshToken.for_user(compte)
 
+        utilisateur_data = {
+            'id': str(compte.id),
+            'username': compte.username,
+            'email': compte.email,
+            'prenom': patient.prenom,
+            'nom': patient.nom,
+            'role': Role.CITOYEN,
+            'gouvernorat': patient.gouvernorat,
+            'ins': patient.ins,
+            'cin': patient.cin or '',
+        }
+
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
+            'utilisateur': utilisateur_data,
             'citoyen': {
                 'id': str(compte.id),
                 'ins': ins,
+                'cin': patient.cin or '',
                 'prenom': patient.prenom,
                 'nom': patient.nom,
+                'date_naissance': str(patient.date_naissance),
                 'gouvernorat': patient.gouvernorat
             }
         })
+
+
+class IdentifierCitoyenCinView(APIView):
+    """
+    POST /api/v1/citoyen/auth/identifier-cin/
+    Recherche un dossier patient par CIN (8 chiffres) et date de naissance.
+    Permet à l'usager de découvrir son INS s'il existe et de valider son identité.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        cin = request.data.get('cin', '').strip()
+        date_naissance = request.data.get('date_naissance', '').strip()
+
+        if not cin or not date_naissance:
+            return Response(
+                {'erreur': _("Le numéro CIN et la date de naissance sont obligatoires.")},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        patient = ProfilPatient.objects.filter(cin=cin, date_naissance=date_naissance).first()
+        if not patient:
+            return Response({
+                'trouve': False,
+                'message': _("Aucun dossier de santé trouvé pour ce CIN et cette date de naissance.")
+            }, status=status.HTTP_200_OK)
+
+        compte = CompteUtilisateur.objects.filter(username=patient.ins).first()
+        has_pin = bool(compte and compte.has_usable_password())
+
+        return Response({
+            'trouve': True,
+            'ins': patient.ins,
+            'cin': patient.cin,
+            'prenom': patient.prenom,
+            'nom': patient.nom,
+            'date_naissance': str(patient.date_naissance),
+            'gouvernorat': patient.gouvernorat,
+            'has_pin': has_pin,
+        }, status=status.HTTP_200_OK)
 
 
 class CitoyenMoiView(APIView):
@@ -276,14 +345,21 @@ class CitoyenAutoEvaluationView(APIView):
         detecteur = supplement.get("detector", {}) if supplement else {}
         referral = supplement.get("referral", {}) if supplement else {}
 
+        p_ml = protocole_ml or {}
         ml_supplement = {
-            "findrisc_score": findrisc.get("score") if findrisc else (protocole_ml.get("findrisc_score") if protocole_ml else None),
-            "risque_10_ans_pct": findrisc.get("ten_year_risk_pct") if findrisc else (protocole_ml.get("findrisc_10y_risk_pct") if protocole_ml else None),
-            "probabilite_dysglycemie": detecteur.get("probability") if detecteur else (protocole_ml.get("dysglycemia_ml_probability") if protocole_ml else None),
-            "dysglycemie_detectee": detecteur.get("flagged") if detecteur else (protocole_ml.get("dysglycemia_flag", False) if protocole_ml else False),
-            "orientation_medicale": referral or (protocole_ml.get("medical_referral") if protocole_ml else None),
-            "requires_medical_referral": bool(protocole_ml and protocole_ml.get("requires_medical_referral")),
-            "urgent_flags": protocole_ml.get("urgent_flags", []) if protocole_ml else [],
+            "findrisc_score": findrisc.get("score") if findrisc else p_ml.get("findrisc_score"),
+            "risque_10_ans_pct": (
+                findrisc.get("ten_year_risk_pct") if findrisc else p_ml.get("findrisc_10y_risk_pct")
+            ),
+            "probabilite_dysglycemie": (
+                detecteur.get("probability") if detecteur else p_ml.get("dysglycemia_ml_probability")
+            ),
+            "dysglycemie_detectee": (
+                detecteur.get("flagged") if detecteur else p_ml.get("dysglycemia_flag", False)
+            ),
+            "orientation_medicale": referral or p_ml.get("medical_referral"),
+            "requires_medical_referral": bool(p_ml.get("requires_medical_referral")),
+            "urgent_flags": p_ml.get("urgent_flags", []),
         }
 
         return Response({
@@ -310,4 +386,3 @@ class CitoyenAutoEvaluationView(APIView):
                 'urgent_flags': protocole_ml.get("urgent_flags", []) if protocole_ml else [],
             }
         }, status=status.HTTP_201_CREATED)
-

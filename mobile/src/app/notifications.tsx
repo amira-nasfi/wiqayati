@@ -14,6 +14,16 @@ import {
 } from 'react-native';
 import apiMobile from '../api/client';
 import { WiqayatiTokens } from '../constants/theme';
+import {
+  Microscope,
+  BarChart3,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Star,
+  FileText,
+  Info,
+} from 'lucide-react-native';
 
 const T = WiqayatiTokens;
 
@@ -32,16 +42,37 @@ const TYPES_SUIVI     = new Set(['SUIVI_MANQUE', 'ENCOURAGEMENT']);
 
 type Categorie = 'DEPISTAGE' | 'SUIVI';
 
-// Icônes textuelles (unicode) — remplace les emojis bruts par des symboles cohérents
-const ICONE_TYPE: Record<string, { emoji: string; couleur: string }> = {
-  PLAN_VALIDE:        { emoji: '✔', couleur: T.colors.accent },
-  NOUVEAU_SCREENING:  { emoji: '⬡', couleur: T.colors.primary },
-  RAPPEL:             { emoji: '⏰', couleur: T.colors.risk.intermediaire.base },
-  RAPPEL_EVALUATION:  { emoji: '⏰', couleur: T.colors.risk.intermediaire.base },
-  SUIVI_MANQUE:       { emoji: '◎', couleur: T.colors.risk.eleve.base },
-  ENCOURAGEMENT:      { emoji: '★', couleur: T.colors.accent },
-  INFO:               { emoji: '◈', couleur: T.colors.primary },
-};
+function renderTypeIcon(type: string) {
+  switch (type) {
+    case 'PLAN_VALIDE':
+      return <CheckCircle2 size={20} color={T.colors.accent} />;
+    case 'NOUVEAU_SCREENING':
+      return <FileText size={20} color={T.colors.primary} />;
+    case 'RAPPEL':
+    case 'RAPPEL_EVALUATION':
+      return <Clock size={20} color={T.colors.risk.intermediaire.base} />;
+    case 'SUIVI_MANQUE':
+      return <AlertCircle size={20} color={T.colors.risk.eleve.base} />;
+    case 'ENCOURAGEMENT':
+      return <Star size={20} color={T.colors.accent} />;
+    default:
+      return <Info size={20} color={T.colors.primary} />;
+  }
+}
+
+function getIconBgColor(type: string): string {
+  switch (type) {
+    case 'PLAN_VALIDE':
+      return T.colors.accent + '18';
+    case 'SUIVI_MANQUE':
+      return T.colors.risk.eleve.base + '18';
+    case 'RAPPEL':
+    case 'RAPPEL_EVALUATION':
+      return T.colors.risk.intermediaire.base + '18';
+    default:
+      return T.colors.primary + '18';
+  }
+}
 
 function categorieDeNotif(type: string): Categorie {
   if (TYPES_SUIVI.has(type)) return 'SUIVI';
@@ -127,7 +158,8 @@ export default function NotificationsScreen() {
       <View style={styles.filtreRow}>
         {(['DEPISTAGE', 'SUIVI'] as Categorie[]).map((cat) => {
           const actif = filtre === cat;
-          const label = cat === 'DEPISTAGE' ? '🔬 Dépistage' : '📊 Suivi quotidien';
+          const label = cat === 'DEPISTAGE' ? 'Dépistage' : 'Suivi quotidien';
+          const IconeCat = cat === 'DEPISTAGE' ? Microscope : BarChart3;
           return (
             <TouchableOpacity
               key={cat}
@@ -135,9 +167,12 @@ export default function NotificationsScreen() {
               onPress={() => setFiltre(cat)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.chipTexte, actif && styles.chipTexteActif]}>
-                {label}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <IconeCat size={14} color={actif ? T.colors.textInverse : T.colors.textSecondary} />
+                <Text style={[styles.chipTexte, actif && styles.chipTexteActif]}>
+                  {label}
+                </Text>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -158,9 +193,13 @@ export default function NotificationsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.etiquetteVide}>
-            <Text style={styles.iconeVide}>
-              {filtre === 'DEPISTAGE' ? '🔬' : '📊'}
-            </Text>
+            <View style={{ marginBottom: 12 }}>
+              {filtre === 'DEPISTAGE' ? (
+                <Microscope size={40} color={T.colors.textMuted} />
+              ) : (
+                <BarChart3 size={40} color={T.colors.textMuted} />
+              )}
+            </View>
             <Text style={styles.etiquetteVideTexte}>
               {filtre === 'DEPISTAGE'
                 ? 'Aucune alerte de dépistage.\nVous serez notifié(e) après la validation de votre plan.'
@@ -169,17 +208,14 @@ export default function NotificationsScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const iconeInfo = ICONE_TYPE[item.type] ?? { emoji: '●', couleur: T.colors.textMuted };
           return (
             <TouchableOpacity
               style={[styles.card, !item.lu && styles.cardNonLu, T.shadows.card]}
               onPress={() => !item.lu && marquerLu(item.id)}
               activeOpacity={item.lu ? 1 : 0.8}
             >
-              <View style={[styles.cardIconeContainer, { backgroundColor: iconeInfo.couleur + '15' }]}>
-                <Text style={[styles.iconeType, { color: iconeInfo.couleur }]}>
-                  {iconeInfo.emoji}
-                </Text>
+              <View style={[styles.cardIconeContainer, { backgroundColor: getIconBgColor(item.type) }]}>
+                {renderTypeIcon(item.type)}
               </View>
               <View style={styles.cardContenu}>
                 <View style={styles.cardEnTete}>

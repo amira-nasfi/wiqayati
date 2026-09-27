@@ -554,8 +554,9 @@ export const CitizenPortal: React.FC = () => {
 
             {/* Nutrition */}
             <div style={{ marginBottom: '1.5rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f2c59', marginBottom: '0.5rem' }}>
-                🥗 {planActif.plan_nutrition?.titre}
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f2c59', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Salad size={20} color="#16a34a" />
+                <span>{planActif.plan_nutrition?.titre}</span>
               </h3>
               {planActif.plan_nutrition?.objectifs && (
                 <ul style={{ paddingLeft: '1.25rem', color: '#475569', fontSize: '0.92rem' }}>
@@ -573,8 +574,9 @@ export const CitizenPortal: React.FC = () => {
 
             {/* Activité */}
             <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f2c59', marginBottom: '0.5rem' }}>
-                🏃‍♂️ {planActif.plan_activite?.titre}
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f2c59', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Activity size={20} color="#0284c7" />
+                <span>{planActif.plan_activite?.titre}</span>
               </h3>
               {planActif.plan_activite?.objectifs && (
                 <ul style={{ paddingLeft: '1.25rem', color: '#475569', fontSize: '0.92rem' }}>

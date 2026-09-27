@@ -33,22 +33,38 @@ class GenerateurPlanSoin:
             return None, None
 
         items = protocole_ml.get("items", [])
-        nutrition_items = [i for i in items if i.get("category") in ("diet", "nutrition", "alimentation")]
-        activite_items = [i for i in items if i.get("category") in ("activity", "exercise", "activite", "activité", "activite_physique")]
-        medical_items = [i for i in items if i.get("category") in ("medical", "referral", "clinical", "consultation", "suivi")]
+        nutrition_items = [
+            i for i in items
+            if i.get("category") in ("diet", "nutrition", "alimentation")
+        ]
+        activite_items = [
+            i for i in items
+            if i.get("category") in ("activity", "exercise", "activite", "activité", "activite_physique")
+        ]
+        medical_items = [
+            i for i in items
+            if i.get("category") in ("medical", "referral", "clinical", "consultation", "suivi")
+        ]
 
         if not nutrition_items and not activite_items:
             return None, None
 
         # Construction du plan nutrition depuis les items ML
-        nutrition_objectifs = [i.get("action") or i.get("recommendation", "") for i in nutrition_items if i.get("action") or i.get("recommendation")]
+        nutrition_objectifs = [
+            i.get("action") or i.get("recommendation", "")
+            for i in nutrition_items
+            if i.get("action") or i.get("recommendation")
+        ]
         if not nutrition_objectifs:
             nutrition_objectifs = [i.get("text", "") for i in nutrition_items if i.get("text")]
 
         medical_notes = ""
         if medical_items:
-            urgencies = [i.get("urgency", "") for i in medical_items if i.get("urgency")]
-            reasons = [i.get("action") or i.get("recommendation", "") for i in medical_items if i.get("action") or i.get("recommendation")]
+            reasons = [
+                i.get("action") or i.get("recommendation", "")
+                for i in medical_items
+                if i.get("action") or i.get("recommendation")
+            ]
             if reasons:
                 medical_notes = " | ".join(reasons[:2])
 
@@ -62,7 +78,11 @@ class GenerateurPlanSoin:
         }
 
         # Construction du plan activité depuis les items ML
-        activite_objectifs = [i.get("action") or i.get("recommendation", "") for i in activite_items if i.get("action") or i.get("recommendation")]
+        activite_objectifs = [
+            i.get("action") or i.get("recommendation", "")
+            for i in activite_items
+            if i.get("action") or i.get("recommendation")
+        ]
         if not activite_objectifs:
             activite_objectifs = [i.get("text", "") for i in activite_items if i.get("text")]
 

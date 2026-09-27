@@ -79,7 +79,10 @@ class RecherchePatientView(APIView):
         return Response(
             {
                 'trouve': False,
-                'message': _("Aucun dossier existant avec ces identifiants. Vous pouvez créer la fiche patient ci-dessous.")
+                'message': _(
+                    "Aucun dossier existant avec ces identifiants. "
+                    "Vous pouvez créer la fiche patient ci-dessous."
+                )
             },
             status=status.HTTP_404_NOT_FOUND
         )
@@ -279,7 +282,9 @@ class SoumissionScreeningView(APIView):
                 "statut_clinique": supplement.get("status"),
                 "orientation_medicale": referral,
                 "urgent_flags": protocole_ml.get("urgent_flags", []) if protocole_ml else [],
-                "requires_medical_referral": protocole_ml.get("requires_medical_referral", False) if protocole_ml else False,
+                "requires_medical_referral": (
+                    protocole_ml.get("requires_medical_referral", False) if protocole_ml else False
+                ),
             }
 
         return Response({

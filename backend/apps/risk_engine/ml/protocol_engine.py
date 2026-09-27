@@ -16,8 +16,6 @@ Output: a structured protocol draft ready for nutritionist review
 Language: French (phase 1). Arabic scaffolded but not filled.
 """
 from datetime import datetime, timezone
-import hashlib
-import json
 import uuid
 
 VERSION = "1.0"
@@ -285,7 +283,7 @@ PROTOCOL_LIBRARY = {
         "evidence": "Modèle de dépistage (NHANES)",
         "source": "Modèle interne",
     },
-        "maintain_habits": {
+    "maintain_habits": {
         "category": "education",
         "priority": "complementaire",
         "title": "Maintenir vos habitudes actuelles",
@@ -336,7 +334,7 @@ def _extract_triggers(assessment: dict) -> list:
     if symptoms & hyper:
         triggers.append("symptoms_hyperglycemia")
 
-      # Glucose interpretation
+    # Glucose interpretation
     glucose_state = assessment.get("glucose", {}).get("state")
     if glucose_state == "diabetes_range":
         triggers.append("glucose_range")
@@ -353,7 +351,7 @@ def _extract_triggers(assessment: dict) -> list:
         elif ds.get("prediabetes_flag"):
             triggers.append("diabscore_prediabetes")
 
-      # Detector. Skip if the user already provided a lab value that's
+    # Detector. Skip if the user already provided a lab value that's
     # already abnormal - the lab is more informative than the model.
     det = assessment.get("detect_now", {})
     if (det.get("available") and det.get("flagged")
@@ -402,8 +400,6 @@ def _extract_triggers(assessment: dict) -> list:
     return triggers
 
 
-
-
 def _build_context(form: dict, assessment: dict) -> dict:
     """Build the placeholder context for template filling."""
     weight = form.get("weight_kg") or 0
@@ -416,8 +412,9 @@ def _build_context(form: dict, assessment: dict) -> dict:
 
     symptoms = form.get("symptoms", [])
     urgent_symptoms = ", ".join(s for s in symptoms if s in {"chest_pain", "fainting"})
-    hyper_symptoms = ", ".join(s for s in symptoms if s in
-                              {"thirst", "urination", "weight_loss", "blurred_vision"})
+    hyper_symptoms = ", ".join(
+        s for s in symptoms if s in {"thirst", "urination", "weight_loss", "blurred_vision"}
+    )
 
     return {
         "weight_kg": _fmt_fr_number(weight),
@@ -530,8 +527,10 @@ def generate_protocol(assessment: dict, form: dict,
     # Sort: priority, then category order, then original order
     items.sort(key=lambda it: (
         PRIORITY_ORDER.get(it["priority"], 99),
-        CATEGORY_ORDER.index(it["category"])
-            if it["category"] in CATEGORY_ORDER else 99,
+        (
+            CATEGORY_ORDER.index(it["category"])
+            if it["category"] in CATEGORY_ORDER else 99
+        ),
     ))
 
     # Cap at MAX_ITEMS
@@ -584,7 +583,6 @@ def generate_protocol(assessment: dict, form: dict,
 
 def _build_summary(assessment: dict, items: list, context: dict) -> str:
     """One-paragraph summary in plain French."""
-    score = assessment.get("future_risk", {}).get("score", "—")
     band = assessment.get("future_risk", {}).get("band", "—")
     pct = context.get("ten_year_pct", "—")
 
@@ -640,7 +638,7 @@ if __name__ == "__main__":
         print(f"Urgent flags: {protocol['urgent_flags']}")
         print(f"Referral:     {protocol['requires_medical_referral']}")
         print(f"\nSummary: {protocol['summary']}")
-        print(f"\nItems:")
+        print("\nItems:")
         for i, item in enumerate(protocol["items"], 1):
             print(f"\n  [{i}] {item['priority'].upper()} | {item['category']}")
             print(f"      Trigger: {item['trigger']}")

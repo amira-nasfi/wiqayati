@@ -21,11 +21,23 @@ export interface Utilisateur {
   campagne_date_fin?: string | null;
 }
 
+export interface ResultatIdentificationCin {
+  trouve: boolean;
+  ins?: string;
+  prenom?: string;
+  nom?: string;
+  gouvernorat?: string;
+  has_pin?: boolean;
+  message?: string;
+}
+
 interface AuthContextType {
   utilisateur: Utilisateur | null;
   estConnecte: boolean;
   estEnChargement: boolean;
   connexion: (identifiant: string, motDePasse: string) => Promise<{ succes: boolean; erreur?: string; redirection?: string }>;
+  connexionCitoyenCin: (cin: string, dateNaissance: string, pin?: string) => Promise<{ succes: boolean; erreur?: string; redirection?: string }>;
+  identifierCitoyenCin: (cin: string, dateNaissance: string) => Promise<ResultatIdentificationCin>;
   deconnexion: () => Promise<void>;
   redirigerSelonRole: (role: string) => string;
 }
@@ -88,6 +100,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const identifierCitoyenCin = async (cin: string, dateNaissance: string): Promise<ResultatIdentificationCin> => {
+    try {
+      const resp = await api.post('/citoyen/auth/identifier-cin/', {
+        cin: cin.trim(),
+        date_naissance: dateNaissance.trim(),
+      });
+      return { trouve: true, ...resp.data };
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.response?.data?.erreur || "Aucun dossier trouvé pour ce CIN.";
+      return { trouve: false, message: msg };
+    }
+  };
+
+  const connexionCitoyenCin = async (cin: string, dateNaissance: string, pin?: string): Promise<{ succes: boolean; erreur?: string; redirection?: string }> => {
+    try {
+      const payload: Record<string, string> = {
+        cin: cin.trim(),
+        date_naissance: dateNaissance.trim(),
+      };
+      if (pin) payload.pin = pin.trim();
+      const resp = await api.post('/citoyen/auth/connexion/', payload);
+      const { access, refresh, utilisateur: user } = resp.data;
+      // Store as citoyen user
+      const citoyenUser: Utilisateur = {
+        id: user?.id || resp.data.ins || '',
+        identifiant: resp.data.ins || '',
+        nom_complet: `${resp.data.prenom || ''} ${resp.data.nom || ''}`.trim(),
+        prenom: resp.data.prenom || '',
+        nom: resp.data.nom || '',
+        email: '',
+        role: 'CITOYEN',
+        role_libelle: 'Citoyen',
+        gouvernorat: resp.data.gouvernorat,
+        mot_de_passe_temporaire: false,
+        ...(user || {}),
+      };
+      localStorage.setItem('wiqayati_access_token', access);
+      localStorage.setItem('wiqayati_refresh_token', refresh);
+      localStorage.setItem('wiqayati_user', JSON.stringify(citoyenUser));
+      setUtilisateur(citoyenUser);
+      return { succes: true, redirection: '/citoyen' };
+    } catch (err: any) {
+      const msg = err.response?.data?.erreur || err.response?.data?.detail || "Identifiants invalides. Vérifiez votre CIN et date de naissance.";
+      return { succes: false, erreur: msg };
+    }
+  };
+
   const deconnexion = async () => {
     try {
       const refresh = localStorage.getItem('wiqayati_refresh_token');
@@ -112,6 +171,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         estConnecte: !!utilisateur,
         estEnChargement,
         connexion,
+        connexionCitoyenCin,
+        identifierCitoyenCin,
         deconnexion,
         redirigerSelonRole: obtenirCheminRedirectionRole,
       }}

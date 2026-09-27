@@ -5,6 +5,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views_citoyen import (
     ConnexionCitoyenView,
+    IdentifierCitoyenCinView,
     CitoyenMoiView,
     CitoyenHistoriqueRisquesView,
     CitoyenPlanActifView,
@@ -17,6 +18,7 @@ router.register(r'notifications', NotificationCitoyenViewSet, basename='citoyen-
 
 urlpatterns = [
     path('auth/connexion/', ConnexionCitoyenView.as_view(), name='citoyen-connexion'),
+    path('auth/identifier-cin/', IdentifierCitoyenCinView.as_view(), name='citoyen-identifier-cin'),
     path('moi/', CitoyenMoiView.as_view(), name='citoyen-moi'),
     path('moi/historique-risques/', CitoyenHistoriqueRisquesView.as_view(), name='citoyen-historique-risques'),
     path('moi/plan-actif/', CitoyenPlanActifView.as_view(), name='citoyen-plan-actif'),

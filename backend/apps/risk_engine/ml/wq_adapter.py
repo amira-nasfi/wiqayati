@@ -111,7 +111,11 @@ def wiqayati_to_our_form(payload: dict) -> dict:
         except (TypeError, ValueError):
             sbp = None
 
-    bp_meds = bool(q.get("prise_antihypertenseur")) if "prise_antihypertenseur" in q else bool(q.get("hypertension_diagnostiquee"))
+    bp_meds = (
+        bool(q.get("prise_antihypertenseur"))
+        if "prise_antihypertenseur" in q
+        else bool(q.get("hypertension_diagnostiquee"))
+    )
 
     return {
         "age": age,
@@ -125,8 +129,12 @@ def wiqayati_to_our_form(payload: dict) -> dict:
         "waist_cm": waist_cm,
 
         # FINDRISC items
-        "active_30min_daily": q.get("niveau_activite_physique") in ("MODERE", "INTENSE", "ELEVE", "ACTIF", "OUI", True),
-        "veg_fruit_daily": q.get("qualite_alimentation") in ("BONNE", "EXCELLENTE", "EQUILIBREE", "QUOTIDIENNE", "OUI", True),
+        "active_30min_daily": q.get("niveau_activite_physique") in (
+            "MODERE", "INTENSE", "ELEVE", "ACTIF", "OUI", True
+        ),
+        "veg_fruit_daily": q.get("qualite_alimentation") in (
+            "BONNE", "EXCELLENTE", "EQUILIBREE", "QUOTIDIENNE", "OUI", True
+        ),
         "bp_medication": bp_meds,
         "high_glucose_ever": bool(q.get("high_glucose_hist", False)),
         "family_history": family,
@@ -258,13 +266,16 @@ def _build_facteurs(assessment: dict, form: dict) -> list:
         if cle not in POINTS:
             continue
         pts = POINTS[cle]
+        valeur_item = (
+            form.get("age") if cle == "age" else
+            form.get("bmi") if cle == "bmi" else
+            form.get("waist_cm") if cle == "waist" else True
+        )
         out.append(_facteur(
             cle=cle,
             libelle=LIBELLES[cle](None, form),
             poids=pts / 26.0,
-            valeur=form.get("age") if cle == "age" else
-                   form.get("bmi") if cle == "bmi" else
-                   form.get("waist_cm") if cle == "waist" else True,
+            valeur=valeur_item,
             seuil=SEUILS[cle],
             direction=DIRECTION[cle],
         ))
@@ -273,9 +284,12 @@ def _build_facteurs(assessment: dict, form: dict) -> list:
     return out[:5]
 
 
-def our_assessment_to_wiqayati(assessment: dict, form: dict,
-                                request_id: str = None,
-                                include_supplement: bool = True) -> dict:
+def our_assessment_to_wiqayati(
+    assessment: dict,
+    form: dict,
+    request_id: str = None,
+    include_supplement: bool = True
+) -> dict:
     """
     Take our assess() output and format it as the WiQayati response contract.
 

@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field, asdict
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict
+
 
 # ===========================================================================
 # FORM SPECIFICATION - build your form from exactly this, nothing more
@@ -112,6 +112,7 @@ def _points(value, table):
             return pts
     return table[-1][1]
 
+
 def findrisc_ten_year_risk(score: int):
     """Map a FINDRISC score to a 10-year T2D risk percentage.
     Returns a float in [0, 100]. See FINDRISC_TEN_YEAR_RISK for caveats.
@@ -120,6 +121,8 @@ def findrisc_ten_year_risk(score: int):
         if score < bound:
             return pct
     return FINDRISC_TEN_YEAR_RISK[-1][1]
+
+
 def findrisc(a: dict, waist_variant: str = "original"):
     """Returns (score, band, per-item breakdown). Breakdown drives the
     'why this score' display AND the prevention plan."""
@@ -323,10 +326,14 @@ def diabscore(a: dict):
         return None, {"missing": "waist_cm and height_cm are both required"}
 
     whtr_component = (waist / height) * 100
-    family_component = (DIABSCORE_FAMILY_POINTS
-                         if a["family_history"] == "first_degree" else 0)
-    gestational_component = (DIABSCORE_GESTATIONAL_POINTS
-                              if a.get("gestational_dm") else 0)
+    family_component = (
+        DIABSCORE_FAMILY_POINTS
+        if a["family_history"] == "first_degree" else 0
+    )
+    gestational_component = (
+        DIABSCORE_GESTATIONAL_POINTS
+        if a.get("gestational_dm") else 0
+    )
 
     score = a["age"] + whtr_component + family_component + gestational_component
 
@@ -486,9 +493,9 @@ def assess(a: dict, nhanes_model=None) -> Dict[str, Any]:
     out["plan"] = prevention_plan(a, items, bmi, state)
 
     current_risk = findrisc_ten_year_risk(score)
-    sim_loss   = simulate(a, weight_kg=a["weight_kg"] * 0.93)
+    sim_loss = simulate(a, weight_kg=a["weight_kg"] * 0.93)
     sim_active = simulate(a, active=True)
-    sim_both   = simulate(a, weight_kg=a["weight_kg"] * 0.93, active=True)
+    sim_both = simulate(a, weight_kg=a["weight_kg"] * 0.93, active=True)
 
     out["simulation"] = {
         "current": {

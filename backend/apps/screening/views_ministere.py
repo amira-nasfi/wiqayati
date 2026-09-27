@@ -109,7 +109,10 @@ class StatsApercuMinistereView(APIView):
         pct_obesite_abdo = round((nb_obesite_abdominale / total_screenings * 100), 1) if total_screenings > 0 else 0.0
         pct_famille = round((nb_antecedent_famille / total_screenings * 100), 1) if total_screenings > 0 else 0.0
         pct_gestationnel = round((nb_diabete_gestationnel / nb_femmes * 100), 1) if nb_femmes > 0 else 0.0
-        pct_eleve = round((dist_risques.get(NiveauRisque.ELEVE, 0) / total_screenings * 100), 1) if total_screenings > 0 else 0.0
+        pct_eleve = (
+            round((dist_risques.get(NiveauRisque.ELEVE, 0) / total_screenings * 100), 1)
+            if total_screenings > 0 else 0.0
+        )
 
         return Response({
             'total_patients_uniques': total_patients,
@@ -119,7 +122,10 @@ class StatsApercuMinistereView(APIView):
             'taux_prediabete_pct': round((nb_prediabete / total_screenings * 100), 1) if total_screenings > 0 else 0.0,
             'nb_personnes_risque_diminue': nb_risque_diminue,
             'total_suivis_longitudinaux': total_suivis_longitudinaux,
-            'taux_amelioration_risque_pct': round((nb_risque_diminue / total_suivis_longitudinaux * 100), 1) if total_suivis_longitudinaux > 0 else 0.0,
+            'taux_amelioration_risque_pct': (
+                round((nb_risque_diminue / total_suivis_longitudinaux * 100), 1)
+                if total_suivis_longitudinaux > 0 else 0.0
+            ),
             'distribution_risques': {
                 'FAIBLE': dist_risques.get(NiveauRisque.FAIBLE, 0),
                 'INTERMEDIAIRE': dist_risques.get(NiveauRisque.INTERMEDIAIRE, 0),

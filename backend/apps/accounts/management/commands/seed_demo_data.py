@@ -46,7 +46,7 @@ class Command(BaseCommand):
         self.stdout.write("\n[2/5] Création des comptes utilisateurs et structures...")
         with transaction.atomic():
             # Admin IT
-            admin_it = CompteUtilisateur.objects.create_user(
+            CompteUtilisateur.objects.create_user(
                 username='admin.it',
                 email='admin.it@wiqayati.tn',
                 password='Admin2026!',
@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 is_staff=True,
             )
             # Admin Ministère
-            admin_min = CompteUtilisateur.objects.create_user(
+            CompteUtilisateur.objects.create_user(
                 username='admin.ministere',
                 email='admin.ministere@sante.gov.tn',
                 password='Admin2026!',
@@ -158,7 +158,9 @@ class Command(BaseCommand):
                 role=Role.ADMIN_IT,
             )
 
-        self.stdout.write(self.style.SUCCESS(f"     [OK] {CompteUtilisateur.objects.count()} comptes crees avec succes."))
+        self.stdout.write(
+            self.style.SUCCESS(f"     [OK] {CompteUtilisateur.objects.count()} comptes crees avec succes.")
+        )
 
         self.stdout.write("\n[3/5] Création des dossiers patients et dépistages...")
 
@@ -176,7 +178,7 @@ class Command(BaseCommand):
             ('09112233', 'TUN10001978', 'Tarak',     'Mejri',     '1978-05-19', 'M', 'Kairouan', '+21623100011'),
             ('13223344', 'TUN10001995', 'Amel',      'Bouzid',    '1995-10-10', 'F', 'Bizerte',  '+21624100012'),
             ('07334455', 'TUN10001982', 'Walid',     'Ben Amor',  '1982-04-02', 'M', 'Ariana',   '+21626100013'),
-            ('10445566', 'TUN10001998', 'Yasmine',   'Trabelsi',  '1998-08-14', 'F', 'Ben Arous','+21627100014'),
+            ('10445566', 'TUN10001998', 'Yasmine',   'Trabelsi',  '1998-08-14', 'F', 'Ben Arous', '+21627100014'),
             ('06556677', 'TUN10001970', 'Moncef',    'Jlassi',    '1970-12-25', 'M', 'Gafsa',    '+21628100015'),
             ('11667788', 'TUN10001992', 'Mouna',     'Gharbi',    '1992-06-30', 'F', 'Gabès',    '+21629100016'),
         ]
@@ -463,19 +465,37 @@ class Command(BaseCommand):
                     'Déficit calorique modéré de 450 à 500 kcal/jour sans privation drastique',
                     'Éviction complète des boissons sucrées, sodas et pâtisseries orientales',
                     'Remplacement systématique du pain blanc tunisien par du pain complet ou d\'orge (Mbeses complet)',
-                    'Consommation quotidienne d\'au moins 400g de légumes locaux (salade mechouia allégée, tajines de légumes)',
+                    (
+                        'Consommation quotidienne d\'au moins 400g de légumes locaux '
+                        '(salade mechouia allégée, tajines de légumes)'
+                    ),
                     'Privilégier l\'huile d\'olive extra vierge tunisienne (2 cuillères à soupe max par jour)',
-                    'Apport protéique régulier : poissons de Méditerranée 2 à 3 fois par semaine, légumineuses (pois chiches, lentilles)',
+                    (
+                        'Apport protéique régulier : poissons de Méditerranée 2 à 3 fois par semaine, '
+                        'légumineuses (pois chiches, lentilles)'
+                    ),
                 ],
-                'conseils_specifiques': 'Plan généré par l\'Agent Hybride WiQayati à partir des 14 variables du screening et des données DMI.',
+                'conseils_specifiques': (
+                    'Plan généré par l\'Agent Hybride WiQayati à partir des 14 variables du screening '
+                    'et des données DMI.'
+                ),
             },
             'INTERMEDIAIRE': {
                 'titre': 'Plan d\'équilibrage alimentaire structuré (Agent Hybride)',
                 'objectifs': [
-                    'Adopter le régime méditerranéen traditionnel tunisien (céréales complètes, huile d\'olive, légumes cuits et crus)',
-                    'Limiter le sel de table à moins de 5g par jour pour préserver la fonction rénale et cardiovasculaire',
+                    (
+                        'Adopter le régime méditerranéen traditionnel tunisien '
+                        '(céréales complètes, huile d\'olive, légumes cuits et crus)'
+                    ),
+                    (
+                        'Limiter le sel de table à moins de 5g par jour pour préserver la '
+                        'fonction rénale et cardiovasculaire'
+                    ),
                     'Structurer les prises alimentaires en 3 repas équilibrés sans grignotage intermédiaire',
-                    'Consommer 2 fruits frais entiers de saison par jour (agrumes, grenades, pêches) à distance des repas',
+                    (
+                        'Consommer 2 fruits frais entiers de saison par jour '
+                        '(agrumes, grenades, pêches) à distance des repas'
+                    ),
                 ],
                 'conseils_specifiques': 'Suivi trimestriel en centre de santé de base. Auto-surveillance recommandée.',
             },
@@ -495,7 +515,10 @@ class Command(BaseCommand):
                 'titre': 'Programme de réadaptation cardiovasculaire et métabolique',
                 'objectifs': [
                     'Marche dynamique quotidienne progressive de 40 à 45 minutes (fractionnable en 2 x 20 min)',
-                    'Rupture systématique de la sédentarité : se lever et marcher 3 minutes toutes les heures de travail',
+                    (
+                        'Rupture systématique de la sédentarité : se lever et marcher '
+                        '3 minutes toutes les heures de travail'
+                    ),
                     'Renforcement musculaire léger (squats assis, montées de marche) 2 fois par semaine',
                     'Objectif podomètre : 7 500 à 9 000 pas par jour',
                 ],
@@ -605,7 +628,7 @@ class Command(BaseCommand):
                 notes = (
                     f"Recommandations de l'Agent Hybride validées pour {prenom} {nom}."
                     if statut_plan == StatutPlan.VALIDE else
-                    f"Plan initial généré automatiquement par l'Agent Hybride en attente de personnalisation."
+                    "Plan initial généré automatiquement par l'Agent Hybride en attente de personnalisation."
                 )
                 plan = PlanSoin.objects.create(
                     patient=patient,
@@ -634,7 +657,7 @@ class Command(BaseCommand):
 
                 # Compte citoyen
                 if ins in CITOYENS_PIN:
-                    citoyen = CompteUtilisateur.objects.create_user(
+                    CompteUtilisateur.objects.create_user(
                         username=ins,
                         email=f"{ins.lower()}@citoyen.wiqayati.tn",
                         password=CITOYENS_PIN[ins],
@@ -683,7 +706,9 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"     [OK] {len(patients_crees)} patients crees avec CIN 8 chiffres."))
         self.stdout.write(self.style.SUCCESS(f"     [OK] {ReponseScreening.objects.count()} depistages enregistres."))
-        self.stdout.write(self.style.SUCCESS(f"     [OK] {PlanSoin.objects.count()} plans de soins generes (0 rejete)."))
+        self.stdout.write(
+            self.style.SUCCESS(f"     [OK] {PlanSoin.objects.count()} plans de soins generes (0 rejete).")
+        )
 
         self.stdout.write("\n[4/5] Creation des notifications citoyennes...")
         for ins in CITOYENS_PIN:

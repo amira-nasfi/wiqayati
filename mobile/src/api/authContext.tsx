@@ -34,6 +34,7 @@ interface ContexteAuth {
   profil: ProfilCitoyen | null;
   erreurConnexion: string | null;
   seConnecter: (ins: string, pin: string) => Promise<void>;
+  seConnecterParCin: (cin: string, dateNaissance: string) => Promise<void>;
   seDeconnecter: () => Promise<void>;
   rafraichirProfil: () => Promise<void>;
 }
@@ -45,6 +46,7 @@ const AuthContext = createContext<ContexteAuth>({
   profil: null,
   erreurConnexion: null,
   seConnecter: async () => {},
+  seConnecterParCin: async () => {},
   seDeconnecter: async () => {},
   rafraichirProfil: async () => {},
 });
@@ -103,6 +105,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const seConnecterParCin = async (cin: string, dateNaissance: string) => {
+    setErreurConnexion(null);
+    try {
+      const resp = await apiMobile.post('/citoyen/auth/connexion/', {
+        cin: cin.trim(),
+        date_naissance: dateNaissance.trim(),
+      });
+      await sauvegarderTokens(resp.data.access, resp.data.refresh);
+      await chargerProfil();
+      setEstConnecte(true);
+    } catch (err: any) {
+      console.error('[AUTH CIN ERROR]', err);
+      let msg = "Aucun dossier trouvé pour ce CIN et cette date de naissance.";
+      if (!err.response) {
+        msg = `Erreur réseau : impossible de contacter le serveur (${err.message || 'delai dépassé'}). URL: ${BASE_API_URL}`;
+      } else if (err.response?.data?.erreur) {
+        msg = err.response.data.erreur;
+      } else if (err.response?.data?.detail) {
+        msg = err.response.data.detail;
+      }
+      setErreurConnexion(msg);
+      throw new Error(msg);
+    }
+  };
+
   const seDeconnecter = async () => {
     try {
       await apiMobile.post('/citoyen/auth/deconnexion/');
@@ -131,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profil,
         erreurConnexion,
         seConnecter,
+        seConnecterParCin,
         seDeconnecter,
         rafraichirProfil,
       }}

@@ -20,6 +20,7 @@ import {
   TrendingDown,
   HeartPulse,
   AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   PieChart,
@@ -132,7 +133,7 @@ export const MinistryAdminDashboard: React.FC = () => {
             fontSize: '0.8rem', lineHeight: 1.55, zIndex: 50,
             border: '1px solid rgba(255,255,255,0.1)',
           }}>
-            <div style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)', width: '10px', height: '10px', backgroundColor: '#0B2535', borderRight: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', transform: 'translateX(-50%) rotate(45deg)' }} />
+            <div style={{ position: 'absolute', bottom: '-6px', left: '50%', width: '10px', height: '10px', backgroundColor: '#0B2535', borderRight: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)', transform: 'translateX(-50%) rotate(45deg)' }} />
             {content}
           </div>
         </>
@@ -536,7 +537,9 @@ export const MinistryAdminDashboard: React.FC = () => {
                   <>
                     <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#FCA5A5' }}>Alerte Diabète Avéré</div>
                     Patients avec glycémie à jeun <strong>≥ 1,26 g/L (7,0 mmol/L)</strong> : seuil de diagnostic du diabète selon OMS/STE.<br /><br />
-                    <span style={{ color: '#FCA5A5' }}>⚠ Ces personnes nécessitent une consultation médicale urgente pour confirmation biologique.</span>
+                    <span style={{ color: '#FCA5A5', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <AlertTriangle size={13} style={{ flexShrink: 0 }} /> Ces personnes nécessitent une consultation médicale urgente pour confirmation biologique.
+                    </span>
                   </>
                 } />
               </div>

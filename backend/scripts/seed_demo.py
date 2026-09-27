@@ -37,14 +37,14 @@ sys.path.insert(0, str(BASE_DIR))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'wiqayati.settings.development')
 django.setup()
 
-from django.utils import timezone
-from django.db import transaction
+from django.utils import timezone  # noqa: E402
+from django.db import transaction  # noqa: E402
 
-from apps.accounts.models import CompteUtilisateur, Role, Notification
-from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumission
-from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque
-from apps.care_plan.models import PlanSoin, StatutPlan
-from apps.nutritionist_queue.models import (
+from apps.accounts.models import CompteUtilisateur, Role, Notification  # noqa: E402
+from apps.screening.models import ProfilPatient, ReponseScreening, TypeSoumission  # noqa: E402
+from apps.risk_engine.models import ResultatEvaluationRisque, NiveauRisque  # noqa: E402
+from apps.care_plan.models import PlanSoin, StatutPlan  # noqa: E402
+from apps.nutritionist_queue.models import (  # noqa: E402
     TacheNutritionniste, PrioriteTache, StatutTache,
 )
 
@@ -214,7 +214,7 @@ PATIENTS_CONFIG = [
     # 12 : INTERMÉDIAIRE, Pré-diabète (acanthosis + surpoids)
     ('07334455', 'TUN10001982', 'Walid',     'Ben Amor',  '1982-04-02', 'M', 'Ariana',   '+21626100013'),
     # 13 : FAIBLE, Mobile
-    ('10445566', 'TUN10001998', 'Yasmine',   'Trabelsi',  '1998-08-14', 'F', 'Ben Arous','+21627100014'),
+    ('10445566', 'TUN10001998', 'Yasmine',   'Trabelsi',  '1998-08-14', 'F', 'Ben Arous', '+21627100014'),
     # 14 : FAIBLE, Caravane
     ('06556677', 'TUN10001970', 'Moncef',    'Jlassi',    '1970-12-25', 'M', 'Gafsa',    '+21628100015'),
     # 15 : INTERMÉDIAIRE, Mobile
@@ -254,7 +254,10 @@ SCREENINGS_DETAIL = [
             'traitement_antihypertenseur': True, 'high_glucose_hist': True,
             'diabete_gestationnel_antecedent': True, 'medicaments_corticoides': False,
             'acanthosis_nigricans': True, 'score_findrisc': 21,
-            'notes_dmi': 'Dépistée lors de la caravane Sfax Sud. Glycémie capillaire très élevée, consultation médecin requise.',
+            'notes_dmi': (
+                'Dépistée lors de la caravane Sfax Sud. Glycémie capillaire très élevée, '
+                'consultation médecin requise.'
+            ),
         }
     },
     # 2 : Karim Mansouri (ÉLEVÉ, CSB Sousse)
@@ -504,16 +507,28 @@ PLANS_NUTRITION_TEMPLATES = {
             'Déficit calorique modéré de 450 à 500 kcal/jour sans privation drastique',
             'Éviction complète des boissons sucrées, sodas et pâtisseries orientales',
             'Remplacement systématique du pain blanc tunisien par du pain complet ou d\'orge (Mbeses complet)',
-            'Consommation quotidienne d\'au moins 400g de légumes locaux (salade mechouia allégée en huile, tajines de légumes)',
+            (
+                'Consommation quotidienne d\'au moins 400g de légumes locaux '
+                '(salade mechouia allégée en huile, tajines de légumes)'
+            ),
             'Privilégier l\'huile d\'olive extra vierge tunisienne (2 cuillères à soupe max par jour)',
-            'Apport protéique régulier : poissons de Méditerranée 2 à 3 fois par semaine, légumineuses (pois chiches, lentilles)',
+            (
+                'Apport protéique régulier : poissons de Méditerranée 2 à 3 fois par semaine, '
+                'légumineuses (pois chiches, lentilles)'
+            ),
         ],
-        'conseils_specifiques': 'Plan généré par l\'Agent Hybride WiQayati à partir des 14 variables du screening et des données DMI. Consultation mensuelle avec le nutritionniste référent recommandée.',
+        'conseils_specifiques': (
+            'Plan généré par l\'Agent Hybride WiQayati à partir des 14 variables du screening et '
+            'des données DMI. Consultation mensuelle avec le nutritionniste référent recommandée.'
+        ),
     },
     'INTERMEDIAIRE': {
         'titre': 'Plan d\'équilibrage alimentaire structuré (Agent Hybride)',
         'objectifs': [
-            'Adopter le régime méditerranéen traditionnel tunisien (céréales complètes, huile d\'olive, légumes cuits et crus)',
+            (
+                'Adopter le régime méditerranéen traditionnel tunisien '
+                '(céréales complètes, huile d\'olive, légumes cuits et crus)'
+            ),
             'Limiter le sel de table à moins de 5g par jour pour préserver la fonction rénale et cardiovasculaire',
             'Structurer les prises alimentaires en 3 repas équilibrés sans grignotage intermédiaire',
             'Consommer 2 fruits frais entiers de saison par jour (agrumes, grenades, pêches) à distance des repas',
@@ -658,8 +673,8 @@ with transaction.atomic():
             )
         else:
             notes = (
-                f"Plan initial généré automatiquement par l'Agent Hybride. "
-                f"En attente de revue par le nutritionniste pour ajustement personnalisé."
+                "Plan initial généré automatiquement par l'Agent Hybride. "
+                "En attente de revue par le nutritionniste pour ajustement personnalisé."
             )
 
         plan = PlanSoin.objects.create(
@@ -704,7 +719,10 @@ with transaction.atomic():
     # ── 7. SUIVI LONGITUDINAL (Évaluations répétées démontrant la baisse du risque) ──
     # Patients 0, 2, 3, 6 ont une 2ème évaluation récente avec score réduit !
     patients_suivi = [
-        (0, 52, NiveauRisque.INTERMEDIAIRE, 29.8, 6.0, "Baisse de l'IMC et amélioration de l'HbA1c après 4 mois de régime."),
+        (
+            0, 52, NiveauRisque.INTERMEDIAIRE, 29.8, 6.0,
+            "Baisse de l'IMC et amélioration de l'HbA1c après 4 mois de régime."
+        ),
         (2, 48, NiveauRisque.INTERMEDIAIRE, 27.9, 5.7, "Reprise de la marche quotidienne, glycémie stabilisée."),
         (3, 30, NiveauRisque.FAIBLE, 24.8, 5.2, "Normalisation pondérale et glycémie à jeun redevenue normale."),
         (6, 42, NiveauRisque.INTERMEDIAIRE, 26.5, 5.5, "Excellente adhésion au programme d'activité physique."),
@@ -762,7 +780,8 @@ for ins, (_, _, _) in CITOYENS_DATA.items():
                 destinataire=compte,
                 type_notification=Notification.TypeNotification.PLAN_VALIDE,
                 message=(
-                    "Votre plan personnalisé de nutrition et d'activité physique a été validé par votre nutritionniste. "
+                    "Votre plan personnalisé de nutrition et d'activité physique a été "
+                    "validé par votre nutritionniste. "
                     "Consultez l'onglet « Mon Plan » pour découvrir vos recommandations."
                 ),
                 lu=False,
@@ -785,7 +804,8 @@ for ins, (_, _, _) in CITOYENS_DATA.items():
             destinataire=compte,
             type_notification=Notification.TypeNotification.RAPPEL_AUTO_EVALUATION,
             message=(
-                "Pensez à renouveler votre auto-évaluation dans 3 mois pour suivre l'évolution de vos indicateurs de santé."
+                "Pensez à renouveler votre auto-évaluation dans 3 mois pour suivre "
+                "l'évolution de vos indicateurs de santé."
             ),
             lu=True,
         )
@@ -839,7 +859,10 @@ print(f"  Dépistages totaux      : {ReponseScreening.objects.count()}")
 print(f"  Évaluations de risque  : {ResultatEvaluationRisque.objects.count()}")
 print(f"  Plans Validés          : {PlanSoin.objects.filter(statut=StatutPlan.VALIDE).count()}")
 print(f"  Plans Brouillon/Modif  : {PlanSoin.objects.filter(statut=StatutPlan.BROUILLON).count()}")
-print(f"  Plans Rejetés          : {PlanSoin.objects.filter(statut=StatutPlan.REJETE).count()} (0 rejeté - conformément aux règles cliniques)")
+print(
+    f"  Plans Rejetés          : {PlanSoin.objects.filter(statut=StatutPlan.REJETE).count()} "
+    f"(0 rejeté - conformément aux règles cliniques)"
+)
 
 print("\n" + "=" * 70)
 print("  Base de données WiQayati peuplée avec succès !")

@@ -3,7 +3,7 @@ Tests unitaires pour le moteur d'évaluation de risque (ML et Déterministe) et 
 Vérifie la conformité avec le contrat d'interface Wiqayati v1.0.
 """
 from django.test import TestCase
-from apps.risk_engine.services import ClientMoteurRisque, ServiceMLMoteurRisque, ServiceProtocoleML
+from apps.risk_engine.services import ClientMoteurRisque, ServiceProtocoleML
 from apps.care_plan.services import GenerateurPlanSoin
 
 

@@ -24,6 +24,7 @@ import { useAuth } from '../api/authContext';
 import apiMobile from '../api/client';
 import { useSuiviQuotidien } from '../hooks/useSuiviQuotidien';
 import { WiqayatiTokens } from '../constants/theme';
+import { ClipboardList } from 'lucide-react-native';
 
 interface PlanActif {
   a_un_plan_valide: boolean;
@@ -209,7 +210,9 @@ export default function SuiviQuotidienScreen() {
     return (
       <View style={styles.centreChargement}>
         <View style={[styles.carteAttente, WiqayatiTokens.shadows.card]}>
-          <Text style={styles.iconeAttente}>📋</Text>
+          <View style={styles.iconeAttenteBox}>
+            <ClipboardList size={40} color={WiqayatiTokens.colors.primary} />
+          </View>
           <Text style={styles.titreAttente}>Suivi bientôt disponible</Text>
           <Text style={styles.texteAttente}>
             Votre suivi quotidien sera disponible une fois votre plan validé par le nutritionniste.
@@ -404,8 +407,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: 320,
   },
-  iconeAttente: {
-    fontSize: 40,
+  iconeAttenteBox: {
     marginBottom: 12,
   },
   titreAttente: {

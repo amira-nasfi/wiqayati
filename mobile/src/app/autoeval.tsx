@@ -14,29 +14,74 @@ import {
 } from 'react-native';
 import apiMobile from '../api/client';
 import { WiqayatiTokens } from '../constants/theme';
+import {
+  Activity,
+  Zap,
+  AlertTriangle,
+  ShieldCheck,
+  Clock,
+  Brain,
+  Building2,
+  ClipboardList,
+  Salad,
+  Lightbulb,
+  Search,
+  Microscope,
+  User,
+  Stethoscope,
+  Heart,
+  Cigarette,
+} from 'lucide-react-native';
 
 type NiveauActivite = 'SEDENTAIRE' | 'FAIBLE' | 'MODERE' | 'ACTIF';
 type QualiteAlimentation = 'MAUVAISE' | 'MOYENNE' | 'BONNE';
 type StatutTabac = 'JAMAIS' | 'ANCIEN' | 'ACTIF';
 type Genre = 'M' | 'F';
 
-const NIVEAUX_ACTIVITE: { valeur: NiveauActivite; libelle: string; icon: string }[] = [
-  { valeur: 'SEDENTAIRE', libelle: 'Sédentaire', icon: '🪑' },
-  { valeur: 'FAIBLE',     libelle: 'Faible',     icon: '🚶' },
-  { valeur: 'MODERE',     libelle: 'Modéré',     icon: '🏃' },
-  { valeur: 'ACTIF',      libelle: 'Actif',      icon: '⚡' },
+const ChoixIcone: React.FC<{ type: string; color: string; size?: number }> = ({ type, color, size = 14 }) => {
+  switch (type) {
+    case 'SEDENTAIRE':
+      return <Clock size={size} color={color} />;
+    case 'FAIBLE':
+      return <Activity size={size} color={color} />;
+    case 'MODERE':
+      return <Activity size={size} color={color} />;
+    case 'ACTIF':
+      return <Zap size={size} color={color} />;
+    case 'MAUVAISE':
+      return <AlertTriangle size={size} color={color} />;
+    case 'MOYENNE':
+      return <Salad size={size} color={color} />;
+    case 'BONNE':
+      return <Heart size={size} color={color} />;
+    case 'JAMAIS':
+      return <ShieldCheck size={size} color={color} />;
+    case 'ANCIEN':
+      return <Clock size={size} color={color} />;
+    case 'ACTIF_TABAC':
+      return <Cigarette size={size} color={color} />;
+    default:
+      return null;
+  }
+};
+
+const NIVEAUX_ACTIVITE: { valeur: NiveauActivite; libelle: string; iconKey: string }[] = [
+  { valeur: 'SEDENTAIRE', libelle: 'Sédentaire', iconKey: 'SEDENTAIRE' },
+  { valeur: 'FAIBLE',     libelle: 'Faible',     iconKey: 'FAIBLE' },
+  { valeur: 'MODERE',     libelle: 'Modéré',     iconKey: 'MODERE' },
+  { valeur: 'ACTIF',      libelle: 'Actif',      iconKey: 'ACTIF' },
 ];
 
-const QUALITE_ALIM: { valeur: QualiteAlimentation; libelle: string; icon: string }[] = [
-  { valeur: 'MAUVAISE', libelle: 'À améliorer', icon: '🍟' },
-  { valeur: 'MOYENNE',  libelle: 'Équilibrée',  icon: '🥗' },
-  { valeur: 'BONNE',    libelle: 'Optimale',    icon: '🥑' },
+const QUALITE_ALIM: { valeur: QualiteAlimentation; libelle: string; iconKey: string }[] = [
+  { valeur: 'MAUVAISE', libelle: 'À améliorer', iconKey: 'MAUVAISE' },
+  { valeur: 'MOYENNE',  libelle: 'Équilibrée',  iconKey: 'MOYENNE' },
+  { valeur: 'BONNE',    libelle: 'Optimale',    iconKey: 'BONNE' },
 ];
 
-const TABAC: { valeur: StatutTabac; libelle: string; icon: string }[] = [
-  { valeur: 'JAMAIS', libelle: 'Jamais',       icon: '🌿' },
-  { valeur: 'ANCIEN', libelle: 'Ex-fumeur',    icon: '⏳' },
-  { valeur: 'ACTIF',  libelle: 'Fumeur actif', icon: '🚬' },
+const TABAC: { valeur: StatutTabac; libelle: string; iconKey: string }[] = [
+  { valeur: 'JAMAIS', libelle: 'Jamais',       iconKey: 'JAMAIS' },
+  { valeur: 'ANCIEN', libelle: 'Ex-fumeur',    iconKey: 'ANCIEN' },
+  { valeur: 'ACTIF',  libelle: 'Fumeur actif', iconKey: 'ACTIF_TABAC' },
 ];
 
 function SectionChoix<T extends string>({
@@ -46,7 +91,7 @@ function SectionChoix<T extends string>({
   onChange,
 }: {
   label: string;
-  options: { valeur: T; libelle: string; icon?: string }[];
+  options: { valeur: T; libelle: string; iconKey?: string }[];
   valeurActuelle: T;
   onChange: (v: T) => void;
 }) {
@@ -66,7 +111,15 @@ function SectionChoix<T extends string>({
               onPress={() => onChange(opt.valeur)}
               activeOpacity={0.7}
             >
-              {opt.icon && <Text style={styles.choixIcon}>{opt.icon}</Text>}
+              {opt.iconKey && (
+                <View style={{ marginRight: 6 }}>
+                  <ChoixIcone
+                    type={opt.iconKey}
+                    color={estActif ? WiqayatiTokens.colors.textInverse : WiqayatiTokens.colors.primary}
+                    size={14}
+                  />
+                </View>
+              )}
               <Text
                 style={[
                   styles.choixBtnTexte,
@@ -186,15 +239,13 @@ export default function AutoEvaluationScreen() {
       ? WiqayatiTokens.colors.risk.intermediaire
       : WiqayatiTokens.colors.risk.faible;
 
-    const emojiIcon = niveau === 'ELEVE' ? '⚠️' : niveau === 'INTERMEDIAIRE' ? '⚡' : '🛡️';
-
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Statut de vérification clinique réservé au nutritionniste */}
         <View style={styles.verificationBanner}>
           <View style={styles.verificationHeader}>
             <View style={styles.verificationHeaderLeft}>
-              <Text style={styles.verificationIcon}>⏳</Text>
+              <Clock size={16} color={WiqayatiTokens.colors.primary} />
               <Text style={styles.verificationTitle}>Brouillon IA — Lecture seule</Text>
             </View>
             <View style={[
@@ -216,8 +267,10 @@ export default function AutoEvaluationScreen() {
 
         {/* Carte de score principale */}
         <View style={[styles.resultatCard, { backgroundColor: riskToken.surface, borderColor: riskToken.border }]}>
-          <View style={[styles.resultatIconWrapper, { backgroundColor: riskToken.border }]}>
-            <Text style={styles.resultatEmoji}>{emojiIcon}</Text>
+          <View style={[styles.resultatIconWrapper, { backgroundColor: riskToken.border, justifyContent: 'center', alignItems: 'center' }]}>
+            {niveau === 'ELEVE' && <AlertTriangle size={34} color={riskToken.base} />}
+            {niveau === 'INTERMEDIAIRE' && <Zap size={34} color={riskToken.base} />}
+            {niveau === 'FAIBLE' && <ShieldCheck size={34} color={riskToken.base} />}
           </View>
           
           <Text style={[styles.resultatTitreBadge, { color: riskToken.text }]}>
@@ -244,7 +297,7 @@ export default function AutoEvaluationScreen() {
         {mlSupp && (
           <View style={styles.mlCard}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeaderIcon}>🧠</Text>
+              <Brain size={18} color={WiqayatiTokens.colors.primary} />
               <Text style={styles.cardTitre}>Analyse IA Approfondie</Text>
             </View>
 
@@ -303,7 +356,7 @@ export default function AutoEvaluationScreen() {
         {/* Alerte référal médical urgent */}
         {mlSupp?.requires_medical_referral && (
           <View style={styles.referralAlert}>
-            <Text style={styles.referralAlertIcon}>🏥</Text>
+            <Building2 size={24} color="#dc2626" />
             <View style={styles.referralAlertBody}>
               <Text style={styles.referralAlertTitle}>Consultation médicale recommandée</Text>
               {mlSupp.orientation_medicale?.reason && (
@@ -322,7 +375,7 @@ export default function AutoEvaluationScreen() {
         {planSoin && (
           <View style={styles.planCard}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeaderIcon}>📋</Text>
+              <ClipboardList size={18} color={WiqayatiTokens.colors.primary} />
               <Text style={styles.cardTitre}>Plan Recommandé par l'IA</Text>
             </View>
             <Text style={styles.planNotice}>
@@ -333,7 +386,7 @@ export default function AutoEvaluationScreen() {
             {planSoin.plan_nutrition && (
               <View style={styles.planSectionNutrition}>
                 <View style={styles.planSectionHeader}>
-                  <Text style={styles.planSectionIcon}>🥗</Text>
+                  <Salad size={18} color="#166534" />
                   <Text style={styles.planSectionTitle}>
                     {planSoin.plan_nutrition.titre || "Recommandations Nutritionnelles"}
                   </Text>
@@ -346,9 +399,12 @@ export default function AutoEvaluationScreen() {
                 ))}
                 {planSoin.plan_nutrition.conseils_specifiques ? (
                   <View style={styles.planConseilBox}>
-                    <Text style={styles.planConseilText}>
-                      💡 Conseil : {planSoin.plan_nutrition.conseils_specifiques}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 5 }}>
+                      <Lightbulb size={13} color="#0d9488" style={{ marginTop: 1 }} />
+                      <Text style={styles.planConseilText}>
+                        Conseil : {planSoin.plan_nutrition.conseils_specifiques}
+                      </Text>
+                    </View>
                   </View>
                 ) : null}
               </View>
@@ -358,7 +414,7 @@ export default function AutoEvaluationScreen() {
             {planSoin.plan_activite && (
               <View style={styles.planSectionActivite}>
                 <View style={styles.planSectionHeader}>
-                  <Text style={styles.planSectionIcon}>🏃‍♂️</Text>
+                  <Activity size={18} color="#1e40af" />
                   <Text style={[styles.planSectionTitle, { color: '#1e40af' }]}>
                     {planSoin.plan_activite.titre || "Programme d'Activité Physique"}
                   </Text>
@@ -378,7 +434,7 @@ export default function AutoEvaluationScreen() {
         {eval_?.facteurs_principaux?.length > 0 && (
           <View style={styles.card}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeaderIcon}>🔍</Text>
+              <Search size={18} color={WiqayatiTokens.colors.primary} />
               <Text style={styles.cardTitre}>Facteurs contributifs</Text>
             </View>
             <View style={styles.facteursList}>
@@ -394,9 +450,12 @@ export default function AutoEvaluationScreen() {
 
         {/* Note médicale */}
         <View style={styles.infoNoteCard}>
-          <Text style={styles.infoNoteText}>
-            💡 Ce dépistage est indicatif. Parlez-en à votre professionnel de santé ou consultez votre plan de prévention personnalisé.
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <Lightbulb size={16} color={WiqayatiTokens.colors.primary} style={{ marginTop: 2, flexShrink: 0 }} />
+            <Text style={[styles.infoNoteText, { flex: 1 }]}>
+              Ce dépistage est indicatif. Parlez-en à votre professionnel de santé ou consultez votre plan de prévention personnalisé.
+            </Text>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -421,7 +480,10 @@ export default function AutoEvaluationScreen() {
       {/* En-tête clinique */}
       <View style={styles.header}>
         <View style={styles.badgePill}>
-          <Text style={styles.badgePillText}>🔬 Outil FINDRISC Adapté</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Microscope size={13} color={WiqayatiTokens.colors.primary} />
+            <Text style={styles.badgePillText}>Outil FINDRISC Adapté</Text>
+          </View>
         </View>
         <Text style={styles.titrePage}>Auto-évaluation</Text>
         <Text style={styles.sousTitrePage}>
@@ -449,22 +511,25 @@ export default function AutoEvaluationScreen() {
 
       {erreur && (
         <View style={styles.alerteErreur}>
-          <Text style={styles.alerteErreurTexte}>⚠️ {erreur}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AlertTriangle size={16} color="#991b1b" />
+            <Text style={styles.alerteErreurTexte}>{erreur}</Text>
+          </View>
         </View>
       )}
 
       {/* ── Section 1 : Informations personnelles ── */}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardHeaderIcon}>👤</Text>
+          <User size={18} color={WiqayatiTokens.colors.primary} />
           <Text style={styles.cardTitre}>1. Paramètres corporels</Text>
         </View>
 
         <SectionChoix
           label="Genre biologique"
           options={[
-            { valeur: 'M', libelle: 'Homme', icon: '♂️' },
-            { valeur: 'F', libelle: 'Femme', icon: '♀️' },
+            { valeur: 'M', libelle: 'Homme' },
+            { valeur: 'F', libelle: 'Femme' },
           ]}
           valeurActuelle={genre}
           onChange={setGenre}
@@ -568,7 +633,7 @@ export default function AutoEvaluationScreen() {
       {/* ── Section 2 : Antécédents ── */}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardHeaderIcon}>🩺</Text>
+          <Stethoscope size={18} color={WiqayatiTokens.colors.primary} />
           <Text style={styles.cardTitre}>2. Antécédents médicaux</Text>
         </View>
 
@@ -632,7 +697,7 @@ export default function AutoEvaluationScreen() {
       {/* ── Section 3 : Habitudes de vie ── */}
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardHeaderIcon}>🌱</Text>
+          <Heart size={18} color={WiqayatiTokens.colors.primary} />
           <Text style={styles.cardTitre}>3. Habitudes de vie</Text>
         </View>
 

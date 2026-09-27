@@ -8,7 +8,6 @@ import {
   Activity,
   Salad,
   Scale,
-  Heart,
   Cigarette,
   Dna,
   FlaskConical,
@@ -137,7 +136,11 @@ const PanneauDonneesCliniques: React.FC<{ plan: any }> = ({ plan }) => {
               tourTaille ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {tourTaille} cm
-                  {risqueVisceral && <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#fee2e2', color: '#991b1b' }}>⚠ Adiposité viscérale</span>}
+                  {risqueVisceral && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700, backgroundColor: '#fee2e2', color: '#991b1b' }}>
+                      <AlertTriangle size={11} /> Adiposité viscérale
+                    </span>
+                  )}
                 </span>
               ) : '—'
             } />
@@ -587,7 +590,9 @@ export const NutritionistPortal: React.FC = () => {
                     )}
                     {planEnConsultation.plan_activite?.contre_indications_dmi?.length > 0 && (
                       <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', backgroundColor: '#fff5f5', borderRadius: '4px', border: '1px solid #fed7d7' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c53030', marginBottom: '3px' }}>⚠ Contre-indications DMI</div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c53030', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertTriangle size={12} /> Contre-indications DMI
+                        </div>
                         <ul style={{ paddingLeft: '1rem', fontSize: '0.8rem', color: '#c53030', margin: 0 }}>
                           {planEnConsultation.plan_activite.contre_indications_dmi.map((ci: string, i: number) => (
                             <li key={i}>{ci}</li>

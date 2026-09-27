@@ -14,6 +14,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { WiqayatiTokens } from '../constants/theme';
+import {
+  AlertTriangle,
+  Zap,
+  ShieldCheck,
+  Microscope,
+  Clock,
+  ClipboardList,
+} from 'lucide-react-native';
 
 interface Evaluation {
   id: string;
@@ -43,11 +51,17 @@ const STYLE_RISQUE = {
   FAIBLE:        WiqayatiTokens.colors.risk.faible,
 };
 
-const ICONE_RISQUE: Record<string, string> = {
-  ELEVE: '⚠️',
-  INTERMEDIAIRE: '⚡',
-  FAIBLE: '✅',
-};
+function renderRisqueIcon(niveau: string, color: string, size = 22) {
+  switch (niveau) {
+    case 'ELEVE':
+      return <AlertTriangle size={size} color={color} />;
+    case 'INTERMEDIAIRE':
+      return <Zap size={size} color={color} />;
+    case 'FAIBLE':
+    default:
+      return <ShieldCheck size={size} color={color} />;
+  }
+}
 
 export function StatutDernierBilan({
   evaluations,
@@ -82,7 +96,10 @@ export function StatutDernierBilan({
             onPress={onNaviguerEvaluation}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnPrimaireTexte}>🔬 Démarrer l'évaluation</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Microscope size={16} color={WiqayatiTokens.colors.textInverse} />
+              <Text style={styles.btnPrimaireTexte}>Démarrer l'évaluation</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -93,7 +110,6 @@ export function StatutDernierBilan({
   const seuilMois = SEUIL_MOIS[derniere.niveau_risque] ?? 12;
   const doitRefaire = moisDepuis >= seuilMois;
   const risqueStyle = STYLE_RISQUE[derniere.niveau_risque] ?? STYLE_RISQUE.FAIBLE;
-  const icone = ICONE_RISQUE[derniere.niveau_risque] ?? '📋';
 
   const dateFormatee = new Date(derniere.evalue_le).toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -119,7 +135,9 @@ export function StatutDernierBilan({
           },
         ]}
       >
-        <Text style={styles.badgeRisqueIcone}>{icone}</Text>
+        <View style={{ marginRight: 12 }}>
+          {renderRisqueIcon(derniere.niveau_risque, risqueStyle.base, 24)}
+        </View>
         <View style={styles.badgeRisqueTextes}>
           <Text style={[styles.badgeRisqueNiveau, { color: risqueStyle.text }]}>
             {derniere.niveau_risque_libelle ?? derniere.niveau_risque}
@@ -133,11 +151,14 @@ export function StatutDernierBilan({
       {/* CTA conditionnel adaptatif (C4) */}
       {doitRefaire && (
         <View style={styles.rappelContainer}>
-          <Text style={styles.rappelTexte}>
-            {derniere.niveau_risque === 'ELEVE'
-              ? `⏰ Réévaluation recommandée tous les ${seuilMois} mois pour votre profil.`
-              : `⏰ Une nouvelle évaluation est recommandée tous les ${seuilMois} mois.`}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 8 }}>
+            <Clock size={15} color={WiqayatiTokens.colors.risk.intermediaire.base} style={{ marginTop: 2 }} />
+            <Text style={[styles.rappelTexte, { flex: 1 }]}>
+              {derniere.niveau_risque === 'ELEVE'
+                ? `Réévaluation recommandée tous les ${seuilMois} mois pour votre profil.`
+                : `Une nouvelle évaluation est recommandée tous les ${seuilMois} mois.`}
+            </Text>
+          </View>
           <TouchableOpacity
             style={styles.btnPrimaire}
             onPress={onNaviguerEvaluation}
@@ -154,7 +175,10 @@ export function StatutDernierBilan({
         onPress={onNaviguerPlan}
         activeOpacity={0.7}
       >
-        <Text style={styles.lienPlanTexte}>📋 Consulter mon plan nutritionnel →</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <ClipboardList size={15} color={WiqayatiTokens.colors.primary} />
+          <Text style={styles.lienPlanTexte}>Consulter mon plan nutritionnel →</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );

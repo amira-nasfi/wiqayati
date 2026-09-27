@@ -11,15 +11,39 @@ import {
   TabListProps,
 } from 'expo-router/ui';
 import { Pressable, useColorScheme, View, StyleSheet, Text } from 'react-native';
+import {
+  FolderOpen,
+  ClipboardList,
+  Search,
+  Bell,
+  HeartPulse,
+} from 'lucide-react-native';
 
 import { Colors, Spacing } from '@/constants/theme';
 
-const ONGLETS = [
-  { nom: 'index',        href: '/',              libelle: 'Dossier',    emoji: '🗂️' },
-  { nom: 'plan',         href: '/plan',          libelle: 'Mon Plan',   emoji: '📋' },
-  { nom: 'autoeval',     href: '/autoeval',      libelle: 'Évaluation', emoji: '🔍' },
-  { nom: 'notifications',href: '/notifications', libelle: 'Alertes',    emoji: '🔔' },
+type TabIconType = 'DOSSIER' | 'PLAN' | 'AUTOEVAL' | 'NOTIF';
+
+const ONGLETS: { nom: string; href: string; libelle: string; iconType: TabIconType }[] = [
+  { nom: 'index',        href: '/',              libelle: 'Dossier',    iconType: 'DOSSIER' },
+  { nom: 'plan',         href: '/plan',          libelle: 'Mon Plan',   iconType: 'PLAN' },
+  { nom: 'autoeval',     href: '/autoeval',      libelle: 'Évaluation', iconType: 'AUTOEVAL' },
+  { nom: 'notifications',href: '/notifications', libelle: 'Alertes',    iconType: 'NOTIF' },
 ];
+
+function renderTabIcon(type: TabIconType, isFocused?: boolean) {
+  const color = isFocused ? '#2563eb' : '#64748b';
+  const size = 15;
+  switch (type) {
+    case 'DOSSIER':
+      return <FolderOpen size={size} color={color} />;
+    case 'PLAN':
+      return <ClipboardList size={size} color={color} />;
+    case 'AUTOEVAL':
+      return <Search size={size} color={color} />;
+    case 'NOTIF':
+      return <Bell size={size} color={color} />;
+  }
+}
 
 export default function AppTabs() {
   return (
@@ -29,7 +53,7 @@ export default function AppTabs() {
         <BarreNavigation>
           {ONGLETS.map((onglet) => (
             <TabTrigger key={onglet.nom} name={onglet.nom} href={onglet.href as any} asChild>
-              <BoutonOnglet emoji={onglet.emoji}>{onglet.libelle}</BoutonOnglet>
+              <BoutonOnglet iconType={onglet.iconType}>{onglet.libelle}</BoutonOnglet>
             </TabTrigger>
           ))}
         </BarreNavigation>
@@ -38,11 +62,11 @@ export default function AppTabs() {
   );
 }
 
-function BoutonOnglet({ children, isFocused, emoji, ...props }: TabTriggerSlotProps & { emoji?: string }) {
+function BoutonOnglet({ children, isFocused, iconType, ...props }: TabTriggerSlotProps & { iconType?: TabIconType }) {
   return (
     <Pressable {...(props as any)} style={({ pressed }) => [styles.pressable, pressed && { opacity: 0.7 }]}>
       <View style={[styles.ongletView, isFocused && styles.ongletActif]}>
-        <Text style={styles.emoji}>{emoji}</Text>
+        {iconType && renderTabIcon(iconType, isFocused)}
         <Text style={[styles.ongletTexte, isFocused && styles.ongletTexteActif]}>
           {children}
         </Text>
@@ -55,7 +79,10 @@ function BarreNavigation(props: TabListProps) {
   return (
     <View {...props} style={styles.barreContainer}>
       <View style={styles.barreInterieure}>
-        <Text style={styles.brandTexte}>🌿 Wiqayati</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <HeartPulse size={18} color="#0f2c59" />
+          <Text style={styles.brandTexte}>Wiqayati</Text>
+        </View>
         <View style={styles.ongletGroupe}>
           {props.children}
         </View>

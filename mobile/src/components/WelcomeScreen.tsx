@@ -14,6 +14,14 @@ import {
   Image,
 } from 'react-native';
 import { WiqayatiTokens } from '../constants/theme';
+import {
+  Microscope,
+  Salad,
+  BarChart3,
+  Lock,
+  ShieldCheck,
+  CheckCircle2,
+} from 'lucide-react-native';
 
 const LOGO = require('../../assets/images/logo.png');
 
@@ -23,30 +31,45 @@ interface WelcomeScreenProps {
 
 const PILIERS = [
   {
-    icone: '🔬',
+    iconType: 'DEPISTAGE',
     titre: 'Dépistage FINDRISC',
     description: 'Évaluez vos facteurs de risque métabolique en moins de 2 minutes avec un score clinique validé.',
     accentColor: WiqayatiTokens.colors.primary,
   },
   {
-    icone: '🥗',
+    iconType: 'NUTRITION',
     titre: 'Plan Personnalisé',
     description: 'Objectifs nutritionnels et activité physique établis par votre soignant référent.',
     accentColor: WiqayatiTokens.colors.accent,
   },
   {
-    icone: '📊',
+    iconType: 'SUIVI',
     titre: 'Suivi Quotidien',
     description: 'Cochez vos habitudes jour après jour et maintenez votre équilibre de vie.',
     accentColor: WiqayatiTokens.colors.primary,
   },
   {
-    icone: '🔒',
+    iconType: 'SECURITE',
     titre: 'Espace Sécurisé',
-    description: 'Accédez à votre dossier médical grâce à votre Identifiant National de Santé (INS).',
+    description: 'Accédez à votre dossier médical grâce à votre numéro CIN ou Identifiant National de Santé (INS).',
     accentColor: WiqayatiTokens.colors.accent,
   },
 ];
+
+function renderPilierIcon(type: string, color: string) {
+  switch (type) {
+    case 'DEPISTAGE':
+      return <Microscope size={22} color={color} />;
+    case 'NUTRITION':
+      return <Salad size={22} color={color} />;
+    case 'SUIVI':
+      return <BarChart3 size={22} color={color} />;
+    case 'SECURITE':
+      return <Lock size={22} color={color} />;
+    default:
+      return <ShieldCheck size={22} color={color} />;
+  }
+}
 
 export default function WelcomeScreen({ onConnexion }: WelcomeScreenProps) {
   return (
@@ -60,7 +83,10 @@ export default function WelcomeScreen({ onConnexion }: WelcomeScreenProps) {
         {/* ── En-tête héro ── */}
         <View style={styles.heroSection}>
           <View style={styles.badgeTop}>
-            <Text style={styles.badgeTopTexte}>🛡️ Santé Publique & Prévention</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <ShieldCheck size={14} color={WiqayatiTokens.colors.primary} />
+              <Text style={styles.badgeTopTexte}>Santé Publique & Prévention</Text>
+            </View>
           </View>
 
           <View style={styles.logoConteneur}>
@@ -91,7 +117,7 @@ export default function WelcomeScreen({ onConnexion }: WelcomeScreenProps) {
                 style={[styles.pilierCard, WiqayatiTokens.shadows.card]}
               >
                 <View style={[styles.pilierIconeWrap, { backgroundColor: pilier.accentColor + '18' }]}>
-                  <Text style={styles.pilierIcone}>{pilier.icone}</Text>
+                  {renderPilierIcon(pilier.iconType, pilier.accentColor)}
                 </View>
                 <View style={styles.pilierTextes}>
                   <Text style={styles.pilierTitre}>{pilier.titre}</Text>

@@ -64,29 +64,49 @@ wiqayati/
 
 ---
 
-## 🔑 Identifiants de Démonstration pour Tous les Portails
+## 🔑 Identifiants de Démonstration (Mock Data Credentials)
 
-La plateforme dispose de données de démonstration complètes pré-configurées représentant les différents acteurs du parcours de soins :
+La mire de connexion unifiée est disponible sur : **`http://localhost:5173/connexion`** (Web) ainsi que sur l'application mobile (Expo). Elle offre une **bifurcation claire** entre l'**Espace Citoyen** et l'**Accès Professionnel**.
 
-| Rôle | URL / Accès | Identifiant / INS | Mot de passe / PIN | Nom & Affectation | Fonctionnalités clés |
+---
+
+### 1. 🧑‍⚕️ Profils Professionnels (Santé & Administration)
+
+Connectez-vous via l'onglet **« Accès Professionnel »** (ou utilisez les boutons de pré-remplissage en un clic au bas du formulaire) :
+
+| Rôle | URL / Portail | Identifiant | Mot de passe | Nom & Prénom | Structure / Affectation |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Super Administrateur** | `/django-admin/` | `superadmin` | `SuperAdmin2026!` | Super Admin | Administration système bas niveau Django |
-| **Administrateur IT** | `/admin/it` | `admin.it` | `Admin2026!` | Karim Ben Salah *(DSI Santé)* | Supervision, journaux d'audit de santé, monitoring des services |
-| **Admin Ministère** | `/admin/ministere` | `admin.ministere` | `Admin2026!` | Dr. Houda Meddeb *(Ministère Santé)* | Indicateurs nationaux, cartographie par gouvernorat, tendances |
-| **Nutritionniste 1** | `/nutritionniste` | `nutri.ben_ali` | `Nutri2026!` | Sirine Ben Ali *(Hôpital Tunis)* | File priorisée, examen des dossiers, ajustement et validation de plans |
-| **Nutritionniste 2** | `/nutritionniste` | `nutri.trabelsi` | `Nutri2026!` | Mohamed Trabelsi *(Hôpital Sfax)* | Prise en charge des tâches régionales Sfax |
-| **Nutritionniste 3** | `/nutritionniste` | `nutri.chaabane` | `Nutri2026!` | Leila Chaâbane *(CSB Sousse)* | File d'attente Sousse & révision de plans |
-| **Agent Campagne** | `/agent` | `agent.campagne.sfax`| `Agent2026!` | Khaled Ferchichi *(Campagne Sfax)* | Enregistrement patient INS, formulaire de dépistage terrain |
-| **Agent Soins Primaires** | `/agent` | `agent.csp.tunis` | `Agent2026!` | Amina Gharbi *(CSP Tunis)* | Dépistage en consultation de médecine générale |
-| **Agent Soins Primaires** | `/agent` | `agent.csp.sousse`| `Agent2026!` | Yassine Saidani *(CSP Sousse)* | Dépistage en consultation locale |
-| **Citoyen 1 (Risque Élevé)** | `/citoyen` ou Mobile | `TUN10001980` | `1234` | Mohamed Haddad *(Tunis)* | Plan nutritionnel validé, alertes de suivi |
-| **Citoyen 2 (Risque Élevé)** | `/citoyen` ou Mobile | `TUN10001975` | `1234` | Fatma Belhaj *(Sfax)* | Plan validé, suivi glycémique |
-| **Citoyen 3 (Risque Élevé)** | `/citoyen` ou Mobile | `TUN10001968` | `1234` | Karim Mansouri *(Sousse)* | Plan en attente d'évaluation |
-| **Citoyen 4 (Intermédiaire)** | `/citoyen` ou Mobile | `TUN10001990` | `1234` | Ines Zouari *(Tunis)* | Plan validé, rééquilibrage alimentaire |
-| **Citoyen 5 (Risque Faible)** | `/citoyen` ou Mobile | `TUN10001985` | `1234` | Olfa Dridi *(Nabeul)* | Plan en révision / auto-évaluation |
+| **Super Administrateur** | `/django-admin/` | `superadmin` | `SuperAdmin2026!` | Super Admin | Administration système Django |
+| **Administrateur IT** | `/admin/it` | `admin.it` | `Admin2026!` | Sami Bouaziz | DSI Ministère Santé (Supervision & Audit) |
+| **Admin Ministère** | `/admin/ministere` | `admin.ministere` | `Admin2026!` | Dr. Houda Meddeb | Direction Santé Publique (Cartographie & KPIs) |
+| **Nutritionniste 1** | `/nutritionniste` | `nutri.ben_ali` | `Nutri2026!` | Sirine Ben Ali | Hôpital Charles Nicolle, Tunis |
+| **Nutritionniste 2** | `/nutritionniste` | `nutri.trabelsi` | `Nutri2026!` | Mohamed Trabelsi | CHU Hédi Chaker, Sfax |
+| **Nutritionniste 3** | `/nutritionniste` | `nutri.chaabane` | `Nutri2026!` | Leila Chaâbane | CSB Sahloul, Sousse |
+| **Agent Campagne** | `/agent` | `agent.campagne.sfax` | `Agent2026!` | Khaled Ferchichi | Unité Mobile Sfax (Dépistage terrain) |
+| **Agent Soins Primaires**| `/agent` | `agent.csp.tunis` | `Agent2026!` | Amina Gharbi | Centre de Soins Primaires Bab Souika, Tunis |
+| **Agent Soins Primaires**| `/agent` | `agent.csp.sousse` | `Agent2026!` | Yassine Saidani | Centre de Santé de Base Sousse Ville |
 
-> [!NOTE]
-> Les utilisateurs web se connectent tous via la mire unique : **`http://localhost:5173/connexion`**. La redirection vers le portail approprié est automatique selon le rôle de l'utilisateur.
+---
+
+### 2. 🇹🇳 Profils Citoyens (Patients)
+
+Pour reproduire l'usage grand public réel en Tunisie, les citoyens s'identifient simplement avec leur **CIN (8 chiffres)** et leur **Date de Naissance** :
+1. **Sur le Web (`/connexion`)** : Onglet **« Espace Citoyen (CIN) »** → saisissez le CIN et la date de naissance (ou cliquez sur le bouton de démonstration *Mohamed Haddad*) → validation instantanée et restitution officielle de l'INS → accès au portail citoyen.
+2. **Sur Mobile (Expo)** : Onglet **« Par CIN & Date de naissance »** (ou **« Par INS & Code PIN »** pour les connexions récurrentes).
+
+| Patient (Nom & Prénom) | N° CIN *(8 chiffres)* | Date de Naissance | Identifiant INS | Code PIN | Gouvernorat | Profil Clinique & Statut |
+| :--- | :---: | :---: | :---: | :---: | :--- | :--- |
+| **Mohamed Haddad** *(Démo rapide)* | `08123456` | `15/03/1980` | `TUN10001980` | `1234` | Tunis | **Risque Élevé** (Plan validé, suivi nutritionnel actif) |
+| **Fatma Belhaj** | `09234567` | `22/07/1975` | `TUN10001975` | `1234` | Sfax | **Risque Élevé** (Plan validé, suivi glycémique renforcé) |
+| **Karim Mansouri** | `07345678` | `05/11/1968` | `TUN10001968` | `1234` | Sousse | **Risque Élevé** (En attente d'arbitrage nutritionniste) |
+| **Ines Zouari** | `11456789` | `30/01/1990` | `TUN10001990` | `1234` | Tunis | **Risque Intermédiaire** (Plan hygiéno-diététique validé) |
+| **Olfa Dridi** | `05567890` | `09/02/1985` | `TUN10001985` | `1234` | Nabeul | **Risque Faible** (Auto-évaluation périodique conseillée) |
+| **Nabil Ayari** | `08012345` | `14/06/1972` | `TUN10001972` | `1234` | Tunis | Patient dépisté en consultation CSP |
+| **Walid Ben Amor** | `07334455` | `02/04/1982` | `TUN10001982` | `1234` | Ben Arous | Patient suivi en soins primaires |
+| **Amel Bouzid** | `13223344` | `10/10/1995` | `TUN10001995` | `1234` | Ariana | Auto-évaluation citoyenne en ligne |
+
+> [!TIP]
+> Sur la mire web `/connexion`, cliquez simplement sur **« Pré-remplir avec un compte citoyen de démo (Mohamed Haddad) »** pour tester l'identification citoyenne en un clic sans saisie manuelle.
 
 ---
 
@@ -252,17 +272,19 @@ sequenceDiagram
     B--)F: Synchronisation asynchrone FHIR (Patient, QuestionnaireResponse)
     N->>B: Consultation justification IA, réajustement & validation
     B->>C: Notification push / alerte "Plan de soin validé"
-    C->>B: Connexion mobile (INS + PIN) pour consulter son plan personnalisé
+    C->>B: Connexion citoyenne (CIN + Date de Naissance ou INS + PIN)
 ```
 
 1. **Dépistage** : Connectez-vous en tant qu'agent (`agent.campagne.sfax` / `Agent2026!`) sur `http://localhost:5173/agent`.
-   * Recherchez un patient existant ou créez un nouveau patient avec un identifiant INS.
+   * Recherchez un patient existant par CIN ou INS, ou créez un nouveau patient.
    * Remplissez le formulaire de dépistage (âge, IMC, antécédents, glycémie, habitudes de vie).
    * Soumettez : le score de risque est calculé instantanément.
 2. **Tri et Validation** : Connectez-vous en tant que nutritionniste (`nutri.ben_ali` / `Nutri2026!`) sur `http://localhost:5173/nutritionniste`.
    * La file d'attente affiche le patient classé en priorité selon son niveau de risque.
    * Ouvrez le dossier, modifiez les recommandations si nécessaire et validez le plan de soin.
-3. **Consultation Citoyenne** : Connectez-vous sur le portail Citoyen web ou mobile avec l'INS du patient (ex : `TUN10001980` / `1234`).
+3. **Consultation Citoyenne** : Connectez-vous sur le portail Citoyen web ou mobile :
+   * **Via CIN + Date de Naissance** (ex : `08123456` / `15/03/1980`) pour récupérer son INS automatiquement.
+   * **Via INS + Code PIN** (ex : `TUN10001980` / `1234`).
    * Visualisez le statut du dépistage, les conseils nutritionnels et d'activité physique validés.
 4. **Supervision Ministérielle** : Connectez-vous en tant que Ministère (`admin.ministere` / `Admin2026!`) sur `http://localhost:5173/admin/ministere`.
    * Observez la répartition géographique et les prévalences de facteurs de risque.
