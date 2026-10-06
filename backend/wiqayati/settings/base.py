@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
+import dj_database_url
 
 # ─── Chemins ──────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -83,16 +84,26 @@ TEMPLATES = [
 WSGI_APPLICATION = 'wiqayati.wsgi.application'
 
 # ─── Base de données ──────────────────────────────────────────────────────────
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='wiqayati'),
-        'USER': config('DB_USER', default='wiqayati'),
-        'PASSWORD': config('DB_PASSWORD', default='wiqayati_dev_2026'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5434'),
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='wiqayati'),
+            'USER': config('DB_USER', default='wiqayati'),
+            'PASSWORD': config('DB_PASSWORD', default='wiqayati_dev_2026'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5434'),
+        }
+    }
 
 # ─── Modèle utilisateur personnalisé ──────────────────────────────────────────
 AUTH_USER_MODEL = 'accounts.CompteUtilisateur'

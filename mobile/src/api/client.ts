@@ -26,6 +26,12 @@ const HOST_LAN_IP = '192.168.100.201';
  * - Appareil physique (Android ou iOS) : IP dynamique du serveur Expo / Wi-Fi
  */
 const getBaseApiUrl = (): string => {
+  // 1. URL publique prioritaire (Render / Cloud / APK autonome)
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    const url = process.env.EXPO_PUBLIC_API_URL.trim().replace(/\/+$/, '');
+    return url.endsWith('/api/v1') ? url : `${url}/api/v1`;
+  }
+
   if (Platform.OS === 'web') {
     const host = typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'localhost';
     return `http://${host}:8000/api/v1`;
