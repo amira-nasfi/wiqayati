@@ -16,6 +16,8 @@ ALLOWED_HOSTS = [h.strip() for h in raw_hosts.split(',') if h.strip()]
 # Configuration de la base de données via DATABASE_URL (Supabase PostgreSQL)
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
+    import re
+    DATABASE_URL = re.sub(r':\[([^\]]+)\]@', r':\1@', DATABASE_URL)
     DATABASES['default'] = dj_database_url.parse(
         DATABASE_URL,
         conn_max_age=600,

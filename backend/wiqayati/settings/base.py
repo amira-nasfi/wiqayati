@@ -86,6 +86,9 @@ WSGI_APPLICATION = 'wiqayati.wsgi.application'
 # ─── Base de données ──────────────────────────────────────────────────────────
 DATABASE_URL = os.environ.get('DATABASE_URL') or config('DATABASE_URL', default=None)
 if DATABASE_URL:
+    import re
+    # Nettoyage automatique au cas où des crochets [mot_de_passe] ont été conservés par erreur
+    DATABASE_URL = re.sub(r':\[([^\]]+)\]@', r':\1@', DATABASE_URL)
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
