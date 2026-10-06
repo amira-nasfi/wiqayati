@@ -4,7 +4,7 @@
  */
 import axios from 'axios';
 
-const baseURL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || '/api/v1';
+const baseURL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/+$/, '') || 'https://wiqayati.onrender.com/api/v1';
 
 const api = axios.create({
   baseURL,
@@ -36,7 +36,7 @@ api.interceptors.response.use(
 
       if (refresh) {
         try {
-          const resp = await axios.post('/api/v1/auth/rafraichir/', { refresh });
+          const resp = await axios.post(`${baseURL}/auth/rafraichir/`, { refresh });
           const newAccess = resp.data.access;
           localStorage.setItem('wiqayati_access_token', newAccess);
           originalRequest.headers.Authorization = `Bearer ${newAccess}`;
