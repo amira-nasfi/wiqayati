@@ -23,6 +23,10 @@ jobs:
     name: Build APK with Gradle (no EAS queue)
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,8 +42,14 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Verify Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls $ANDROID_HOME
+          echo "Available build-tools:"
+          ls $ANDROID_HOME/build-tools/ || echo "No build-tools found"
+          echo "Available platforms:"
+          ls $ANDROID_HOME/platforms/ || echo "No platforms found"
 
       - name: Install mobile dependencies
         working-directory: mobile
@@ -58,14 +68,14 @@ jobs:
         working-directory: mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Build Release APK with Gradle
         if: ${{ github.event.inputs.build_type == 'release' }}
         working-directory: mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Find APK file
         id: find_apk
@@ -82,6 +92,4 @@ jobs:
           retention-days: 30
 
       - name: Build complete
-        run: |
-          echo "✅ APK généré avec succès !"
-          echo "Téléchargez-le depuis l'onglet 'Artifacts' de ce workflow GitHub Actions."
+        run: echo "✅ APK disponible dans les Artifacts de ce workflow !"
