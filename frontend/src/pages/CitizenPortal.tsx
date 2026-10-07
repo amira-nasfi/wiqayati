@@ -119,19 +119,19 @@ export const CitizenPortal: React.FC = () => {
     <div style={{ maxWidth: '960px', margin: '0 auto', padding: '1rem 0 3rem' }}>
       {/* Profil Citoyen */}
       <div className="card" style={{
-        marginBottom: '2rem',
+        marginBottom: '1.5rem',
         background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)',
         borderColor: '#bfdbfe'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="citoyen-greeting-card">
           <div>
             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
               Espace Citoyen Wiqayati
             </div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f2c59' }}>
+            <h1 style={{ fontSize: 'clamp(1.4rem, 2.5vw, 1.75rem)', fontWeight: 800, color: '#0f2c59' }}>
               Bonjour, {profil?.prenom} {profil?.nom}
             </h1>
-            <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '0.2rem' }}>
               INS : <strong>{profil?.ins}</strong> • Gouvernorat : {profil?.gouvernorat}
             </div>
           </div>
@@ -347,7 +347,7 @@ export const CitizenPortal: React.FC = () => {
           ) : (
             <form onSubmit={handleAutoEval} style={{ padding: '1.25rem' }}>
               {/* Facteurs biométriques */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="grid-form-citoyen">
                 <div className="form-group">
                   <label className="form-label">Âge</label>
                   <input
@@ -437,7 +437,7 @@ export const CitizenPortal: React.FC = () => {
               </div>
 
               {/* Mode de vie */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="grid-lifestyle-citoyen">
                 <div className="form-group">
                   <label className="form-label">Activité physique quotidienne</label>
                   <select
@@ -479,7 +479,7 @@ export const CitizenPortal: React.FC = () => {
               </div>
 
               {/* Antécédents */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div className="grid-antecedents-citoyen">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.65rem', background: '#f8fafc', borderRadius: '8px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"

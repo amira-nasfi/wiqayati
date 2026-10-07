@@ -50,24 +50,8 @@ export const WelcomePage: React.FC = () => {
         }}
       >
         {/* ── 1. HEADER NAVIGATION (Intégré dans le background) ── */}
-        <header
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 50,
-            width: '100%',
-            backgroundColor: 'transparent',
-            borderBottom: 'none',
-            padding: '1.2rem 3.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxSizing: 'border-box',
-          }}
-        >
-          {/* Logo WiQayati - Grand format en haut à gauche */}
+        <header className="welcome-header">
+          {/* Logo WiQayati */}
           <div
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             style={{
@@ -82,18 +66,13 @@ export const WelcomePage: React.FC = () => {
             <img
               src={wiqayatiLogo}
               alt="Wiqayati"
-              style={{
-                height: '145px',
-                width: 'auto',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 4px 14px rgba(11, 37, 53, 0.08))',
-              }}
+              className="welcome-logo"
             />
           </div>
 
           {/* Navigation Links & Bouton Se connecter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '1.8rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <nav className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1.8rem' }}>
               <button
                 type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -173,7 +152,7 @@ export const WelcomePage: React.FC = () => {
                 gap: '0.5rem',
                 backgroundColor: '#134B65',
                 color: '#FFFFFF',
-                padding: '0.6rem 1.25rem',
+                padding: '0.6rem 1.15rem',
                 borderRadius: '8px',
                 fontSize: '0.88rem',
                 fontWeight: 600,
@@ -181,6 +160,7 @@ export const WelcomePage: React.FC = () => {
                 cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(19, 75, 101, 0.22)',
                 transition: 'all 0.15s',
+                minHeight: '40px',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#0E364A';
@@ -198,44 +178,12 @@ export const WelcomePage: React.FC = () => {
         </header>
 
         {/* ── 2. HERO SECTION ÉPURÉE & HARMONIEUSE ── */}
-        <section
-          style={{
-            position: 'relative',
-            minHeight: '100vh',
-            width: '100%',
-            backgroundImage: 'url(/welcome-bg.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center left',
-            backgroundRepeat: 'no-repeat',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: '6.5rem 5rem 3rem 5rem',
-            boxSizing: 'border-box',
-          }}
-        >
+        <section className="welcome-hero">
           {/* Léger fondu doux pour lisibilité */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(90deg, rgba(246, 250, 252, 0) 0%, rgba(246, 250, 252, 0.1) 40%, rgba(246, 250, 252, 0.85) 65%, rgba(246, 250, 252, 0.95) 100%)',
-              pointerEvents: 'none',
-            }}
-          />
-
+          <div className="welcome-hero-overlay" />
 
           {/* Contenu textuel dans l'espace dégagé à droite */}
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 10,
-              maxWidth: '560px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.35rem',
-            }}
-          >
+          <div className="welcome-hero-content">
             {/* Badge de dépistage sans mention de ministère */}
             <div
               style={{
@@ -362,17 +310,9 @@ export const WelcomePage: React.FC = () => {
         </section>
 
         {/* ── 3. SECTION : COMMENT ÇA MARCHE ── */}
-        <section
-          id="comment-ca-marche"
-          style={{
-            padding: '5.5rem 4rem',
-            backgroundColor: '#FFFFFF',
-            borderTop: '1px solid #E5EEF2',
-            borderBottom: '1px solid #E5EEF2',
-          }}
-        >
+        <section id="comment-ca-marche" className="welcome-steps-section">
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
               <span
                 style={{
                   fontSize: '0.8rem',
@@ -387,7 +327,7 @@ export const WelcomePage: React.FC = () => {
               <h2
                 style={{
                   fontFamily: "'Outfit', sans-serif",
-                  fontSize: '2.2rem',
+                  fontSize: 'clamp(1.6rem, 3vw, 2.2rem)',
                   fontWeight: 700,
                   color: '#0B2535',
                   marginTop: '0.4rem',
@@ -396,7 +336,7 @@ export const WelcomePage: React.FC = () => {
               >
                 Comment fonctionne le dépistage WiQayati ?
               </h2>
-              <p style={{ color: '#4A7186', fontSize: '1.02rem', maxWidth: '640px', margin: '0.75rem auto 0', lineHeight: 1.5 }}>
+              <p style={{ color: '#4A7186', fontSize: '1rem', maxWidth: '640px', margin: '0.75rem auto 0', lineHeight: 1.5 }}>
                 Un processus éprouvé en trois étapes simples pour identifier les risques silencieux
                 et agir avant l’apparition du diabète.
               </p>
@@ -405,8 +345,8 @@ export const WelcomePage: React.FC = () => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
-                gap: '2rem',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '1.5rem',
               }}
             >
               {[
@@ -438,7 +378,7 @@ export const WelcomePage: React.FC = () => {
                     backgroundColor: '#F8FCFD',
                     border: '1px solid #DCEAF0',
                     borderRadius: '16px',
-                    padding: '2.25rem 1.85rem',
+                    padding: '2rem 1.65rem',
                     position: 'relative',
                     transition: 'transform 0.15s, box-shadow 0.15s',
                   }}
@@ -497,20 +437,7 @@ export const WelcomePage: React.FC = () => {
             </div>
 
             {/* Bannière d'accès vers la connexion en bas de page */}
-            <div
-              style={{
-                marginTop: '4.5rem',
-                backgroundColor: '#EDF6F9',
-                border: '1px solid #D2E7ED',
-                borderRadius: '16px',
-                padding: '2.5rem 3rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1.5rem',
-              }}
-            >
+            <div className="welcome-cta-banner">
               <div>
                 <h3
                   style={{
@@ -545,6 +472,7 @@ export const WelcomePage: React.FC = () => {
                   cursor: 'pointer',
                   boxShadow: '0 3px 10px rgba(19, 75, 101, 0.2)',
                   transition: 'background-color 0.15s',
+                  minHeight: '44px',
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0E364A')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#134B65')}
@@ -557,19 +485,7 @@ export const WelcomePage: React.FC = () => {
         </section>
 
         {/* ── 4. FOOTER PROFESSIONNEL ── */}
-        <footer
-          style={{
-            padding: '2.25rem 4rem',
-            backgroundColor: '#0B2535',
-            color: '#B0C8D4',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            fontSize: '0.85rem',
-          }}
-        >
+        <footer className="welcome-footer">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <span style={{ fontWeight: 700, color: '#FFFFFF' }}>WiQayati</span>
             <span>—</span>

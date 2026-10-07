@@ -435,3 +435,432 @@ input, select, textarea {
 .animate-fade-in {
   animation: fadeIn 0.25s ease-out forwards;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ── DESIGN RESPONSIVE & EXPÉRIENCE MOBILE TYPE APPLICATION ("APP-LIKE") ─────
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Masquage conditionnel Desktop / Mobile */
+.show-on-mobile {
+  display: none !important;
+}
+
+.hide-on-mobile {
+  display: block;
+}
+
+/* Barre de navigation inférieure pour mobile (app-like bottom navigation) */
+.mobile-bottom-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .show-on-mobile {
+    display: flex !important;
+  }
+
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  /* Conteneur principal plein écran avec marge adaptée */
+  .main-content {
+    padding: 1rem 0.85rem 4.5rem;
+    max-width: 100%;
+  }
+
+  .centered-container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Cartes cliniques & conteneurs */
+  .card {
+    padding: 1.15rem 1rem;
+    border-radius: 14px;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+  }
+
+  /* En-tête de tableau de bord BI */
+  .bi-dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .bi-dashboard-header h1 {
+    font-size: 1.5rem !important;
+  }
+
+  /* Grille KPI */
+  .bi-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .bi-kpi-card {
+    padding: 1.15rem 1.15rem;
+    border-radius: 12px;
+  }
+
+  .bi-kpi-value {
+    font-size: 1.85rem;
+  }
+
+  /* Onglets défilables horizontalement au doigt */
+  .bi-tab-nav {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-wrap: nowrap;
+    padding: 4px;
+    gap: 0.3rem;
+    scrollbar-width: none;
+  }
+
+  .bi-tab-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bi-tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.82rem;
+  }
+
+  /* Formulaires tactiles (taille min 16px pour éviter le zoom automatique d'iOS Safari) */
+  .form-control,
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    padding: 0.75rem 0.85rem;
+    border-radius: 10px;
+    -webkit-appearance: none;
+  }
+
+  .form-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+
+  /* Boutons tactiles faciles à presser au pouce (hauteur mini 44px) */
+  .btn {
+    min-height: 44px;
+    padding: 0.65rem 1.15rem;
+    font-size: 0.92rem;
+    border-radius: 10px;
+  }
+
+  /* Tableaux avec défilement fluide et indicateur */
+  .table-container {
+    border-radius: 12px;
+    margin: 0 -0.1rem;
+    -webkit-overflow-scrolling: touch;
+    box-shadow: inset -10px 0 10px -10px rgba(0, 0, 0, 0.08);
+  }
+
+  .table-modern th,
+  .table-modern td {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  /* Barre de navigation mobile inférieure (style application native) */
+  .mobile-bottom-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #FFFFFF;
+    border-top: 1px solid var(--border-subtle);
+    padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 100;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -4px 16px rgba(11, 37, 53, 0.06);
+  }
+
+  .mobile-bottom-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+  }
+
+  .mobile-bottom-bar-item.active,
+  .mobile-bottom-bar-item:hover {
+    color: var(--primary-slate);
+    background-color: var(--primary-slate-subtle);
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 0.85rem 0.65rem 5rem;
+  }
+
+  .card {
+    padding: 1rem 0.85rem;
+    border-radius: 12px;
+  }
+}
+
+/* ── Classes Responsives pour Welcome, Login et Portails ── */
+.welcome-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  width: 100%;
+  background-color: transparent;
+  padding: 1.2rem 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.welcome-logo {
+  height: 85px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 14px rgba(11, 37, 53, 0.08));
+  transition: transform 0.2s ease;
+}
+
+.welcome-hero {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background-image: url('/welcome-bg.png');
+  background-size: cover;
+  background-position: center left;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 6.5rem 5rem 3rem 5rem;
+  box-sizing: border-box;
+}
+
+.welcome-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(246, 250, 252, 0) 0%, rgba(246, 250, 252, 0.15) 35%, rgba(246, 250, 252, 0.88) 65%, rgba(246, 250, 252, 0.98) 100%);
+  pointer-events: none;
+}
+
+.welcome-hero-content {
+  position: relative;
+  z-index: 10;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  width: 100%;
+}
+
+.welcome-steps-section {
+  padding: 5.5rem 4rem;
+  background-color: #FFFFFF;
+  border-top: 1px solid #E5EEF2;
+  border-bottom: 1px solid #E5EEF2;
+}
+
+.welcome-cta-banner {
+  margin-top: 4.5rem;
+  background-color: #EDF6F9;
+  border: 1px solid #D2E7ED;
+  border-radius: 16px;
+  padding: 2.5rem 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.welcome-footer {
+  padding: 2.25rem 4rem;
+  background-color: #0B2535;
+  color: #B0C8D4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+
+.login-header {
+  position: relative;
+  z-index: 10;
+  padding: 1.2rem 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 460px;
+  background-color: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(19, 75, 101, 0.14);
+  box-shadow: 0 16px 42px -10px rgba(11, 37, 53, 0.14), 0 3px 8px rgba(11, 37, 53, 0.04);
+  padding: 2.2rem 2.2rem;
+  box-sizing: border-box;
+}
+
+.grid-form-citoyen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grid-lifestyle-citoyen {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.grid-antecedents-citoyen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.citoyen-greeting-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+  .welcome-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .welcome-logo {
+    height: 42px;
+  }
+
+  .welcome-hero {
+    padding: 5rem 1.25rem 3rem;
+    min-height: auto;
+    justify-content: center;
+    background-position: center;
+  }
+
+  .welcome-hero-overlay {
+    background: rgba(246, 250, 252, 0.94);
+  }
+
+  .welcome-hero-content {
+    max-width: 100%;
+    text-align: left;
+    gap: 1.15rem;
+  }
+
+  .welcome-hero-content h1 {
+    font-size: 1.85rem !important;
+    line-height: 1.22 !important;
+  }
+
+  .welcome-steps-section {
+    padding: 3rem 1rem;
+  }
+
+  .welcome-cta-banner {
+    padding: 1.5rem 1.15rem;
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 2.5rem;
+    gap: 1.25rem;
+  }
+
+  .welcome-cta-banner button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .welcome-footer {
+    padding: 1.75rem 1rem 5rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .welcome-footer > div {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .login-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .login-header img {
+    height: 42px !important;
+  }
+
+  .login-card {
+    padding: 1.5rem 1.15rem;
+    border-radius: 16px;
+  }
+
+  .grid-lifestyle-citoyen {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .grid-antecedents-citoyen {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .citoyen-greeting-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .citoyen-greeting-card button {
+    width: 100%;
+    justify-content: center;
+  }
+}

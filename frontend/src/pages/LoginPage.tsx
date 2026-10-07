@@ -177,16 +177,7 @@ export const LoginPage: React.FC = () => {
         />
 
         {/* En-tête */}
-        <header
-          style={{
-            position: 'relative',
-            zIndex: 10,
-            padding: '1.2rem 3.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <header className="login-header">
           <Link
             to="/"
             style={{
@@ -195,12 +186,12 @@ export const LoginPage: React.FC = () => {
               gap: '0.45rem',
               color: '#134B65',
               textDecoration: 'none',
-              fontSize: '0.9rem',
+              fontSize: '0.86rem',
               fontWeight: 600,
-              padding: '0.5rem 1rem',
+              padding: '0.45rem 0.85rem',
               borderRadius: '8px',
               border: '1px solid rgba(19,75,101,0.15)',
-              backgroundColor: 'rgba(255,255,255,0.8)',
+              backgroundColor: 'rgba(255,255,255,0.85)',
               backdropFilter: 'blur(6px)',
               boxShadow: '0 2px 6px rgba(11,37,53,0.05)',
               transition: 'all 0.15s',
@@ -213,15 +204,15 @@ export const LoginPage: React.FC = () => {
             onMouseLeave={(e) => {
               e.currentTarget.style.color = '#134B65';
               e.currentTarget.style.borderColor = 'rgba(19,75,101,0.15)';
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.8)';
+              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.85)';
             }}
           >
             <ArrowLeft size={16} />
-            <span>Retour à l'accueil</span>
+            <span>Accueil</span>
           </Link>
 
           <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <img src={wiqayatiLogo} alt="Wiqayati" style={{ height: '65px', width: 'auto', objectFit: 'contain' }} />
+            <img src={wiqayatiLogo} alt="Wiqayati" style={{ height: '46px', width: 'auto', objectFit: 'contain' }} />
           </Link>
         </header>
 
@@ -234,24 +225,11 @@ export const LoginPage: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '2rem 1.5rem',
+            padding: '1.25rem 1rem 3rem',
             boxSizing: 'border-box',
           }}
         >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '460px',
-              backgroundColor: 'rgba(255,255,255,0.97)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              borderRadius: '20px',
-              border: '1px solid rgba(19,75,101,0.14)',
-              boxShadow: '0 16px 42px -10px rgba(11,37,53,0.14), 0 3px 8px rgba(11,37,53,0.04)',
-              padding: '2.2rem 2.2rem',
-              boxSizing: 'border-box',
-            }}
-          >
+          <div className="login-card">
             {/* Badge sécurisé */}
             <div style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
               <div
